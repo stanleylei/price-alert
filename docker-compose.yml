@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  # Power to Choose scraper service
+  power-to-choose:
+    build: .
+    container_name: price-alert-ptc
+    environment:
+      - SCRAPER_NAME=power_to_choose
+      - SENDER_EMAIL=${SENDER_EMAIL}
+      - SENDER_PASSWORD=${SENDER_PASSWORD}
+      - RECIPIENT_EMAIL=${RECIPIENT_EMAIL}
+      - PTC_ZIP_CODE=${PTC_ZIP_CODE:-76092}
+      - PTC_CONTRACT_MIN=${PTC_CONTRACT_MIN:-12}
+      - PTC_CONTRACT_MAX=${PTC_CONTRACT_MAX:-60}
+      - PTC_PRICE_THRESHOLD=${PTC_PRICE_THRESHOLD:-12.4}
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs
+    env_file:
+      - .env
+
+  # Villa del Arco scraper service
+  villa-del-arco:
+    build: .
+    container_name: price-alert-vda
+    environment:
+      - SCRAPER_NAME=villa_del_arco
+      - SENDER_EMAIL=${SENDER_EMAIL}
+      - SENDER_PASSWORD=${SENDER_PASSWORD}
+      - RECIPIENT_EMAIL=${RECIPIENT_EMAIL}
+      - VDA_CHECK_IN=${VDA_CHECK_IN:-2025-12-16}
+      - VDA_CHECK_OUT=${VDA_CHECK_OUT:-2025-12-19}
+      - VDA_ADULTS=${VDA_ADULTS:-2}
+      - VDA_CHILDREN=${VDA_CHILDREN:-2}
+      - VDA_PRICE_THRESHOLD=${VDA_PRICE_THRESHOLD:-1100}
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs
+    env_file:
+      - .env
+
+  # Run both scrapers (default)
+  all-scrapers:
+    build: .
+    container_name: price-alert-all
+    environment:
+      - SCRAPER_NAME=all
+      - SENDER_EMAIL=${SENDER_EMAIL}
+      - SENDER_PASSWORD=${SENDER_PASSWORD}
+      - RECIPIENT_EMAIL=${RECIPIENT_EMAIL}
+      - PTC_ZIP_CODE=${PTC_ZIP_CODE:-76092}
+      - PTC_CONTRACT_MIN=${PTC_CONTRACT_MIN:-12}
+      - PTC_CONTRACT_MAX=${PTC_CONTRACT_MAX:-60}
+      - PTC_PRICE_THRESHOLD=${PTC_PRICE_THRESHOLD:-12.4}
+      - VDA_CHECK_IN=${VDA_CHECK_IN:-2025-12-16}
+      - VDA_CHECK_OUT=${VDA_CHECK_OUT:-2025-12-19}
+      - VDA_ADULTS=${VDA_ADULTS:-2}
+      - VDA_CHILDREN=${VDA_CHILDREN:-2}
+      - VDA_PRICE_THRESHOLD=${VDA_PRICE_THRESHOLD:-1100}
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs
+    env_file:
+      - .env

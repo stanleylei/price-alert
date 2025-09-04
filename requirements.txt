@@ -1,0 +1,3 @@
+pandas
+playwright
+typing-extensions
