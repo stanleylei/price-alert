@@ -206,7 +206,7 @@ docker run -e SCRAPER_NAME=power_to_choose price-alert
 
 ```bash
 # Run all scrapers
-docker-compose up all-scrapers
+docker-compose up all
 
 # Run specific scraper
 docker-compose up power-to-choose

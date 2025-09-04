@@ -139,7 +139,7 @@ docker run --env-file .env price-alert
 
 ```bash
 # Run all scrapers
-docker-compose up all-scrapers
+docker-compose up all
 
 # Run specific scraper
 docker-compose up power-to-choose

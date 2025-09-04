@@ -14,7 +14,11 @@ services:
       - PTC_CONTRACT_MIN=${PTC_CONTRACT_MIN:-12}
       - PTC_CONTRACT_MAX=${PTC_CONTRACT_MAX:-60}
       - PTC_PRICE_THRESHOLD=${PTC_PRICE_THRESHOLD:-12.4}
-    restart: unless-stopped
+      - PTC_MAX_RESULTS=${PTC_MAX_RESULTS:-5}
+      - SCRAPING_TIMEOUT=${SCRAPING_TIMEOUT:-60000}
+      - SCRAPING_WAIT_TIMEOUT=${SCRAPING_WAIT_TIMEOUT:-30000}
+      - BROWSER_HEADLESS=${BROWSER_HEADLESS:-true}
+      - BROWSER_NO_SANDBOX=${BROWSER_NO_SANDBOX:-true}
     volumes:
       - ./logs:/app/logs
     env_file:
@@ -34,14 +38,17 @@ services:
       - VDA_ADULTS=${VDA_ADULTS:-2}
       - VDA_CHILDREN=${VDA_CHILDREN:-2}
       - VDA_PRICE_THRESHOLD=${VDA_PRICE_THRESHOLD:-1100}
-    restart: unless-stopped
+      - SCRAPING_TIMEOUT=${SCRAPING_TIMEOUT:-60000}
+      - SCRAPING_WAIT_TIMEOUT=${SCRAPING_WAIT_TIMEOUT:-30000}
+      - BROWSER_HEADLESS=${BROWSER_HEADLESS:-true}
+      - BROWSER_NO_SANDBOX=${BROWSER_NO_SANDBOX:-true}
     volumes:
       - ./logs:/app/logs
     env_file:
       - .env
 
   # Run both scrapers (default)
-  all-scrapers:
+  all:
     build: .
     container_name: price-alert-all
     environment:
@@ -53,12 +60,16 @@ services:
       - PTC_CONTRACT_MIN=${PTC_CONTRACT_MIN:-12}
       - PTC_CONTRACT_MAX=${PTC_CONTRACT_MAX:-60}
       - PTC_PRICE_THRESHOLD=${PTC_PRICE_THRESHOLD:-12.4}
+      - PTC_MAX_RESULTS=${PTC_MAX_RESULTS:-5}
       - VDA_CHECK_IN=${VDA_CHECK_IN:-2025-12-16}
       - VDA_CHECK_OUT=${VDA_CHECK_OUT:-2025-12-19}
       - VDA_ADULTS=${VDA_ADULTS:-2}
       - VDA_CHILDREN=${VDA_CHILDREN:-2}
       - VDA_PRICE_THRESHOLD=${VDA_PRICE_THRESHOLD:-1100}
-    restart: unless-stopped
+      - SCRAPING_TIMEOUT=${SCRAPING_TIMEOUT:-60000}
+      - SCRAPING_WAIT_TIMEOUT=${SCRAPING_WAIT_TIMEOUT:-30000}
+      - BROWSER_HEADLESS=${BROWSER_HEADLESS:-true}
+      - BROWSER_NO_SANDBOX=${BROWSER_NO_SANDBOX:-true}
     volumes:
       - ./logs:/app/logs
     env_file:

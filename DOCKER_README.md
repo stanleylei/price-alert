@@ -1,6 +1,14 @@
 # Docker Usage Guide
 
-This guide explains how to use Docker with the new modular price alert scraper structure.
+This guide explains how to use Docker with the new modular price alert scraper structure. **This setup is designed for scheduled jobs that run once and exit.**
+
+## Overview
+
+The containers are designed to:
+- Run the specified scraper(s) once
+- Exit automatically when the job is complete
+- Clean up after themselves (no persistent containers)
+- Be perfect for cron jobs and scheduled tasks
 
 ## Quick Start
 
@@ -10,17 +18,27 @@ This guide explains how to use Docker with the new modular price alert scraper s
 docker build -t price-alert .
 ```
 
-### 2. Run a Specific Scraper
+### 2. Set Up Environment Variables
+
+Create a `.env` file in your project directory by copying the sample:
 
 ```bash
-# Run Power to Choose scraper
-docker run -e SCRAPER_NAME=power_to_choose price-alert
-
-# Run Villa del Arco scraper
-docker run -e SCRAPER_NAME=villa_del_arco price-alert
+cp env.sample .env
 ```
 
-### 3. Run with Custom Configuration
+Then edit `.env` with your actual credentials and configuration.
+
+### 3. Run a Specific Scraper
+
+```bash
+# Run Power to Choose scraper (runs once and exits)
+docker run --rm -e SCRAPER_NAME=power_to_choose price-alert
+
+# Run Villa del Arco scraper (runs once and exits)
+docker run --rm -e SCRAPER_NAME=villa_del_arco price-alert
+```
+
+### 4. Run with Custom Configuration
 
 ```bash
 # Custom email settings
@@ -50,17 +68,17 @@ docker run \
 
 ## Using Docker Compose
 
-### 1. Run Individual Services
+### 1. Run Individual Services (One-time execution)
 
 ```bash
-# Run only Power to Choose scraper
+# Run only Power to Choose scraper (runs once and exits)
 docker-compose up power-to-choose
 
-# Run only Villa del Arco scraper
+# Run only Villa del Arco scraper (runs once and exits)
 docker-compose up villa-del-arco
 
-# Run both scrapers sequentially
-docker-compose up all-scrapers
+# Run both scrapers sequentially (runs once and exits)
+docker-compose up all
 ```
 
 ### 2. Run in Background
@@ -78,7 +96,34 @@ docker-compose logs -f villa-del-arco
 docker-compose down
 ```
 
-### 3. Custom Environment Variables
+### 3. Manual One-time Execution
+
+```bash
+# Run and remove container automatically
+docker-compose up --rm power-to-choose
+
+# Run with custom environment variables
+SCRAPER_NAME=power_to_choose docker-compose up --rm power-to-choose
+```
+
+### 4. Scheduled Execution with Cron
+
+For production scheduled jobs, use these commands:
+
+```bash
+# Run Power to Choose scraper every hour
+0 * * * * cd /path/to/your/project && docker-compose up --rm power-to-choose
+
+# Run Villa del Arco scraper daily at 9 AM
+0 9 * * * cd /path/to/your/project && docker-compose up --rm villa-del-arco
+
+# Run all scrapers daily at 6 AM
+0 6 * * * cd /path/to/your/project && docker-compose up --rm all
+```
+
+**Note**: Containers will exit automatically after completing their task. No need to manually stop them.
+
+### 4. Custom Environment Variables
 
 Create a `.env` file in your project directory:
 
@@ -105,30 +150,36 @@ VDA_PRICE_THRESHOLD=1200
 Then run:
 
 ```bash
-docker-compose up power-to-choose
+docker-compose up --rm power-to-choose
 ```
 
 ## Environment Variables Reference
 
 ### Core Configuration
-- `SCRAPER_NAME` - Which scraper to run (`power_to_choose` or `villa_del_arco`)
+- `SCRAPER_NAME` - Which scraper to run (`power_to_choose`, `villa_del_arco`, or `all`)
 - `SENDER_EMAIL` - Gmail address for sending emails
 - `SENDER_PASSWORD` - Gmail app password
 - `RECIPIENT_EMAIL` - Email address to receive alerts
 
 ### Power to Choose Configuration
-- `PTC_ZIP_CODE` - ZIP code for electricity plan search
-- `PTC_CONTRACT_MIN` - Minimum contract length in months
-- `PTC_CONTRACT_MAX` - Maximum contract length in months
-- `PTC_PRICE_THRESHOLD` - Price threshold in cents per kWh
-- `PTC_MAX_RESULTS` - Maximum number of results to process
+- `PTC_ZIP_CODE` - ZIP code for electricity plan search (default: 76092)
+- `PTC_CONTRACT_MIN` - Minimum contract length in months (default: 12)
+- `PTC_CONTRACT_MAX` - Maximum contract length in months (default: 60)
+- `PTC_PRICE_THRESHOLD` - Price threshold in cents per kWh (default: 12.4)
+- `PTC_MAX_RESULTS` - Maximum number of results to process (default: 5)
 
 ### Villa del Arco Configuration
-- `VDA_CHECK_IN` - Check-in date (YYYY-MM-DD)
-- `VDA_CHECK_OUT` - Check-out date (YYYY-MM-DD)
-- `VDA_ADULTS` - Number of adults
-- `VDA_CHILDREN` - Number of children
-- `VDA_PRICE_THRESHOLD` - Price threshold in USD
+- `VDA_CHECK_IN` - Check-in date (YYYY-MM-DD) (default: 2025-12-16)
+- `VDA_CHECK_OUT` - Check-out date (YYYY-MM-DD) (default: 2025-12-19)
+- `VDA_ADULTS` - Number of adults (default: 2)
+- `VDA_CHILDREN` - Number of children (default: 2)
+- `VDA_PRICE_THRESHOLD` - Price threshold in USD (default: 1100)
+
+### Web Scraping Configuration (Advanced)
+- `SCRAPING_TIMEOUT` - Maximum time to wait for page load in milliseconds (default: 60000)
+- `SCRAPING_WAIT_TIMEOUT` - Maximum time to wait for elements in milliseconds (default: 30000)
+- `BROWSER_HEADLESS` - Run browser in headless mode (default: true)
+- `BROWSER_NO_SANDBOX` - Disable browser sandbox for Docker compatibility (default: true)
 
 ## Advanced Usage
 
