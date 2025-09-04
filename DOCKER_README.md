@@ -28,42 +28,17 @@ cp env.sample .env
 
 Then edit `.env` with your actual credentials and configuration.
 
-### 3. Run a Specific Scraper
+### 3. Run with Docker Compose
 
 ```bash
 # Run Power to Choose scraper (runs once and exits)
-docker run --rm -e SCRAPER_NAME=power_to_choose price-alert
+docker-compose up power-to-choose && docker-compose down
 
 # Run Villa del Arco scraper (runs once and exits)
-docker run --rm -e SCRAPER_NAME=villa_del_arco price-alert
-```
+docker-compose up villa-del-arco && docker-compose down
 
-### 4. Run with Custom Configuration
-
-```bash
-# Custom email settings
-docker run \
-  -e SCRAPER_NAME=power_to_choose \
-  -e SENDER_EMAIL="your-email@gmail.com" \
-  -e SENDER_PASSWORD="your-app-password" \
-  -e RECIPIENT_EMAIL="recipient@example.com" \
-  price-alert
-
-# Custom Power to Choose settings
-docker run \
-  -e SCRAPER_NAME=power_to_choose \
-  -e PTC_ZIP_CODE="75001" \
-  -e PTC_PRICE_THRESHOLD="11.5" \
-  price-alert
-
-# Custom Villa del Arco settings
-docker run \
-  -e SCRAPER_NAME=villa_del_arco \
-  -e VDA_CHECK_IN="2025-01-15" \
-  -e VDA_CHECK_OUT="2025-01-18" \
-  -e VDA_ADULTS="4" \
-  -e VDA_CHILDREN="0" \
-  price-alert
+# Run both scrapers sequentially (runs once and exits)
+docker-compose up all && docker-compose down
 ```
 
 ## Using Docker Compose
@@ -81,29 +56,26 @@ docker-compose up villa-del-arco
 docker-compose up all
 ```
 
-### 2. Run in Background
+**Note**: After containers exit, remove them with `docker-compose down` to clean up.
+
+### 2. Run and Auto-Cleanup (Recommended for scheduled jobs)
 
 ```bash
-# Start services in background
-docker-compose up -d power-to-choose
-docker-compose up -d villa-del-arco
+# Run Power to Choose scraper and remove containers after completion
+docker-compose up power-to-choose && docker-compose down
 
-# View logs
-docker-compose logs -f power-to-choose
-docker-compose logs -f villa-del-arco
+# Run Villa del Arco scraper and remove containers after completion
+docker-compose up villa-del-arco && docker-compose down
 
-# Stop services
-docker-compose down
+# Run all scrapers and remove containers after completion
+docker-compose up all && docker-compose down
 ```
 
 ### 3. Manual One-time Execution
 
 ```bash
-# Run with docker-compose and cleanup (recommended)
+# Run with docker-compose and cleanup
 docker-compose up power-to-choose && docker-compose down
-
-# Run with custom environment variables
-SCRAPER_NAME=power_to_choose docker-compose up power-to-choose && docker-compose down
 ```
 
 ### 4. Scheduled Execution with Cron
@@ -112,18 +84,22 @@ For production scheduled jobs, use these commands:
 
 ```bash
 # Run Power to Choose scraper every hour
-0 * * * * cd /path/to/your/project && docker-compose up --rm power-to-choose
+0 * * * * cd /path/to/your/project && docker-compose up power-to-choose && docker-compose down
 
 # Run Villa del Arco scraper daily at 9 AM
-0 9 * * * cd /path/to/your/project && docker-compose up --rm villa-del-arco
+0 9 * * * cd /path/to/your/project && docker-compose up villa-del-arco && docker-compose down
 
 # Run all scrapers daily at 6 AM
-0 6 * * * cd /path/to/your/project && docker-compose up --rm all
+0 6 * * * cd /path/to/your/project && docker-compose up all && docker-compose down
 ```
 
-**Note**: Containers will exit automatically after completing their task. No need to manually stop them.
+**Important Notes**:
+- `--rm` flag only works with `docker run`, not `docker-compose up`
+- For docker-compose, use `&& docker-compose down` to remove containers after completion
+- Containers will exit automatically after completing their task
+- Always run `docker-compose down` after execution to clean up
 
-### 4. Custom Environment Variables
+### 5. Custom Environment Variables
 
 Create a `.env` file in your project directory:
 
@@ -150,7 +126,7 @@ VDA_PRICE_THRESHOLD=1200
 Then run:
 
 ```bash
-docker-compose up --rm power-to-choose
+docker-compose up power-to-choose && docker-compose down
 ```
 
 ## Environment Variables Reference
@@ -181,165 +157,6 @@ docker-compose up --rm power-to-choose
 - `BROWSER_HEADLESS` - Run browser in headless mode (default: true)
 - `BROWSER_NO_SANDBOX` - Disable browser sandbox for Docker compatibility (default: true)
 
-## Advanced Usage
-
-### 1. Persistent Logs
-
-```bash
-# Create logs directory
-mkdir -p logs
-
-# Run with volume mount for persistent logs
-docker run \
-  -v $(pwd)/logs:/app/logs \
-  -e SCRAPER_NAME=power_to_choose \
-  price-alert
-```
-
-### 2. Scheduled Execution
-
-```bash
-# Run scraper every hour using cron
-0 * * * * docker run --rm price-alert -e SCRAPER_NAME=power_to_choose
-
-# Run scraper daily at 9 AM
-0 9 * * * docker run --rm price-alert -e SCRAPER_NAME=villa_del_arco
-```
-
-### 3. Health Checks
-
-```bash
-# Check container status
-docker ps
-
-# View container logs
-docker logs <container_id>
-
-# Execute commands in running container
-docker exec -it <container_id> /bin/bash
-```
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Playwright Installation**
-   ```bash
-   # Rebuild with fresh Playwright installation
-   docker build --no-cache -t price-alert .
-   ```
-
-2. **Permission Issues**
-   ```bash
-   # Fix file permissions
-   chmod +x start.sh
-   ```
-
-3. **Email Authentication**
-   - Ensure you're using Gmail app passwords, not regular passwords
-   - Check that 2FA is enabled on your Gmail account
-
-4. **Browser Issues**
-   ```bash
-   # Run with debug mode (non-headless)
-   docker run -e BROWSER_HEADLESS=false price-alert
-   ```
-
-### Debug Mode
-
-```bash
-# Run with interactive shell for debugging
-docker run -it --entrypoint /bin/bash price-alert
-
-# Inside container, run scraper manually
-python run_scraper.py power_to_choose --help
-```
-
-## Production Deployment
-
-### 1. Environment Variables
-
-```bash
-# Use Docker secrets or environment files
-docker run \
-  --env-file .env.production \
-  price-alert
-```
-
-### 2. Resource Limits
-
-```bash
-# Set memory and CPU limits
-docker run \
-  --memory="512m" \
-  --cpus="1.0" \
-  -e SCRAPER_NAME=power_to_choose \
-  price-alert
-```
-
-### 3. Restart Policies
-
-```bash
-# Automatic restart on failure
-docker run \
-  --restart unless-stopped \
-  -e SCRAPER_NAME=power_to_choose \
-  price-alert
-```
-
-## Monitoring and Logging
-
-### 1. View Logs
-
-```bash
-# Follow logs in real-time
-docker logs -f <container_id>
-
-# View last 100 lines
-docker logs --tail 100 <container_id>
-```
-
-### 2. Container Metrics
-
-```bash
-# View resource usage
-docker stats
-
-# View container information
-docker inspect <container_id>
-```
-
-## Best Practices
-
-1. **Use Environment Files**: Store sensitive configuration in `.env` files
-2. **Resource Limits**: Set appropriate memory and CPU limits
-3. **Log Rotation**: Mount logs directory for persistent storage
-4. **Health Checks**: Monitor container health and restart on failure
-5. **Security**: Use app passwords, not regular passwords for Gmail
-6. **Backup**: Regularly backup configuration and log files
-
-## Examples
-
-### Complete Example with All Options
-
-```bash
-docker run \
-  --name price-alert-ptc \
-  --restart unless-stopped \
-  --memory="512m" \
-  --cpus="1.0" \
-  -v $(pwd)/logs:/app/logs \
-  -e SCRAPER_NAME=power_to_choose \
-  -e SENDER_EMAIL="your-email@gmail.com" \
-  -e SENDER_PASSWORD="your-app-password" \
-  -e RECIPIENT_EMAIL="recipient@example.com" \
-  -e PTC_ZIP_CODE="75001" \
-  -e PTC_PRICE_THRESHOLD="11.5" \
-  price-alert
-```
-
-This setup provides a robust, configurable Docker environment for running your price alert scrapers with the new modular architecture.
-
 ## Why Not Docker Run?
 
 The `docker run` command won't work properly because:
@@ -350,6 +167,83 @@ The `docker run` command won't work properly because:
 4. **Missing build context** - Would need to specify the full image path
 
 **Use docker-compose instead** - it handles all these requirements automatically.
+
+## Advanced Usage
+
+### 1. Persistent Logs
+
+```bash
+# Create logs directory
+mkdir -p logs
+
+# Run with volume mount for persistent logs
+docker-compose up power-to-choose && docker-compose down
+```
+
+### 2. Debug Mode
+
+```bash
+# Run with interactive shell for debugging
+docker-compose run --rm --entrypoint /bin/bash power-to-choose
+
+# Inside container, run scraper manually
+python run_scraper.py power_to_choose --help
+```
+
+### 3. Production Environment
+
+```bash
+# Use environment files
+cp .env .env.production
+# Edit .env.production with production values
+docker-compose --env-file .env.production up power-to-choose && docker-compose down
+```
+
+### 4. Resource Limits
+
+```bash
+# Set memory and CPU limits in docker-compose.yml
+# Add to your service:
+# deploy:
+#   resources:
+#     limits:
+#       memory: 512M
+#       cpus: '1.0'
+
+docker-compose up power-to-choose && docker-compose down
+```
+
+## Monitoring and Logging
+
+### 1. View Logs
+
+```bash
+# Follow logs in real-time
+docker-compose logs -f power-to-choose
+
+# View last 100 lines
+docker-compose logs --tail 100 power-to-choose
+```
+
+### 2. Container Metrics
+
+```bash
+# View resource usage
+docker stats
+
+# View container information
+docker-compose ps
+```
+
+## Best Practices
+
+1. **Use Environment Files**: Store sensitive configuration in `.env` files
+2. **Use Docker Compose**: Leverage docker-compose.yml for consistent execution
+3. **Resource Limits**: Set appropriate memory and CPU limits in docker-compose.yml
+4. **Log Rotation**: Mount logs directory for persistent storage
+5. **Auto-Cleanup**: Always use `&& docker-compose down` after execution
+6. **Security**: Use app passwords, not regular passwords for Gmail
+7. **Backup**: Regularly backup configuration and log files
 
 ## Container Cleanup Options
 
@@ -384,4 +278,60 @@ Then use:
 **Pros**: One command execution, consistent cleanup, easy to use
 **Cons**: Requires creating a script file
 
+### Option 3: Cron Jobs with Auto-Cleanup
+```bash
+# Run Power to Choose scraper every hour
+0 * * * * cd /path/to/your/project && docker-compose up power-to-choose && docker-compose down
 
+# Run all scrapers daily at 6 AM
+0 6 * * * cd /path/to/your/project && docker-compose up all && docker-compose down
+```
+
+**Pros**: Fully automated, consistent cleanup, perfect for production
+**Cons**: Requires cron setup
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Playwright Installation**
+   ```bash
+   # Rebuild with fresh Playwright installation
+   docker build --no-cache -t price-alert .
+   ```
+
+2. **Permission Issues**
+   ```bash
+   # Fix file permissions
+   chmod +x start.sh
+   ```
+
+3. **Email Authentication**
+   - Ensure you're using Gmail app passwords, not regular passwords
+   - Check that 2FA is enabled on your Gmail account
+
+4. **Browser Issues**
+   ```bash
+   # Run with debug mode (non-headless)
+   BROWSER_HEADLESS=false docker-compose up power-to-choose && docker-compose down
+   ```
+
+## Examples
+
+### Complete Example with All Options
+
+```bash
+# Set up environment variables in .env file
+# Then run with docker-compose
+
+# For production with resource limits, add to docker-compose.yml:
+# deploy:
+#   resources:
+#     limits:
+#       memory: 512M
+#       cpus: '1.0'
+
+docker-compose up power-to-choose && docker-compose down
+```
+
+This setup provides a robust, configurable Docker environment for running your price alert scrapers with the new modular architecture.
