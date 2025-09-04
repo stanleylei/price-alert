@@ -99,11 +99,11 @@ docker-compose down
 ### 3. Manual One-time Execution
 
 ```bash
-# Run and remove container automatically
-docker-compose up --rm power-to-choose
+# Run with docker-compose and cleanup (recommended)
+docker-compose up power-to-choose && docker-compose down
 
 # Run with custom environment variables
-SCRAPER_NAME=power_to_choose docker-compose up --rm power-to-choose
+SCRAPER_NAME=power_to_choose docker-compose up power-to-choose && docker-compose down
 ```
 
 ### 4. Scheduled Execution with Cron
@@ -339,3 +339,49 @@ docker run \
 ```
 
 This setup provides a robust, configurable Docker environment for running your price alert scrapers with the new modular architecture.
+
+## Why Not Docker Run?
+
+The `docker run` command won't work properly because:
+
+1. **Missing environment variables** - No access to the `.env` file
+2. **Missing default values** - No access to defaults defined in docker-compose.yml
+3. **Missing volume mounts** - No access to the logs directory
+4. **Missing build context** - Would need to specify the full image path
+
+**Use docker-compose instead** - it handles all these requirements automatically.
+
+## Container Cleanup Options
+
+### Option 1: Docker Compose with Manual Cleanup (Recommended)
+```bash
+# Run service and cleanup
+docker-compose up power-to-choose && docker-compose down
+
+# Run with .env file (recommended for production)
+docker-compose up power-to-choose && docker-compose down
+```
+
+**Pros**: Uses .env file, easier environment management, consistent with project setup
+**Cons**: Requires manual cleanup command
+
+### Option 2: Docker Compose with Script
+Create a wrapper script for easier execution:
+
+```bash
+#!/bin/bash
+# run-scraper.sh
+SCRAPER_NAME=$1
+docker-compose up $SCRAPER_NAME && docker-compose down
+```
+
+Then use:
+```bash
+./run-scraper.sh power-to-choose
+./run-scraper.sh all
+```
+
+**Pros**: One command execution, consistent cleanup, easy to use
+**Cons**: Requires creating a script file
+
+
