@@ -24,23 +24,28 @@ python run_scraper.py power_to_choose
 # Run Villa del Arco scraper
 python run_scraper.py villa_del_arco
 
+# Run Alaska Airlines scraper
+python run_scraper.py alaska_award_ticket
+
 # Run all scrapers
 python run_scraper.py all
 ```
 
 ## 📋 What It Does
 
-- **Power to Choose**: Monitors electricity plan prices in Texas
-- **Villa del Arco**: Monitors hotel prices in Cabo San Lucas
+- **Power to Choose**: Monitors electricity plan prices in Texas (≤12.4¢/kWh)
+- **Villa del Arco**: Monitors hotel prices in Cabo San Lucas (All-Inclusive <$1,100)
+- **Alaska Airlines**: Monitors award ticket availability (7.5k points for DFW→SNA/ONT)
 - **Modular Design**: Easy to add new price monitoring sites
 - **Email Alerts**: Automatic notifications when price conditions are met
 
 ## 🏗️ Architecture
 
-- **`price_alert_core.py`** - Base classes and shared functionality
-- **`config.py`** - Centralized configuration management
-- **`run_scraper.py`** - Unified runner for all scrapers
+- **`price_alert_core.py`** - Base classes, shared functionality, and email templates
+- **`config.py`** - Centralized configuration management with environment variables
+- **`run_scraper.py`** - Unified runner with centralized scraper registry
 - **`scraper_template.py`** - Template for creating new scrapers
+- **Individual scrapers** - `power_to_choose_scraper.py`, `villa_del_arco_scraper.py`, `alaska_award_ticket_scraper.py`
 
 ## ⚙️ Configuration
 
@@ -53,6 +58,9 @@ python run_scraper.py all
 - `SCRAPER_NAME` - Which scraper to run (default: all)
 - `PTC_ZIP_CODE` - ZIP code for electricity plans
 - `VDA_CHECK_IN/OUT` - Hotel check-in/out dates
+- `ALASKA_DEPARTURE` - Departure airport (default: DFW)
+- `ALASKA_ARRIVAL_STATIONS` - Target arrival airports (default: SNA,ONT)
+- `ALASKA_TARGET_POINTS` - Target points threshold (default: 7500)
 
 ## 🐳 Docker Support
 

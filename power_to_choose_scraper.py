@@ -4,7 +4,7 @@ Refactored to use the modular price alert core.
 """
 
 import re
-from price_alert_core import PriceAlertScraper, run_async_scraper
+from price_alert_core import PriceAlertScraper, run_async_scraper, EmailTemplate
 
 class PowerToChooseScraper(PriceAlertScraper):
     """
@@ -12,14 +12,15 @@ class PowerToChooseScraper(PriceAlertScraper):
     Monitors for plans with prices <= 12.4¢/kWh.
     """
     
-    def __init__(self, zip_code: str = "76092", contract_min: str = "12", contract_max: str = "60"):
+    def __init__(self, zip_code: str = "76092", contract_min: str = "12", contract_max: str = "60", base_url: str = None):
         super().__init__()
         self.zip_code = zip_code
         self.contract_min = contract_min
         self.contract_max = contract_max
+        self.base_url = base_url or "https://www.powertochoose.org/en-us"
     
     def get_scraping_url(self) -> str:
-        return "https://www.powertochoose.org/en-us"
+        return self.base_url
     
     def get_email_subject(self) -> str:
         return "Power to Choose - Electricity Plan Alert"
@@ -39,15 +40,11 @@ class PowerToChooseScraper(PriceAlertScraper):
             lambda url: f'<a href="{url}" target="_blank">Link</a>'
         )
 
-        return f"""
-        <html>
-          <body>
-            <h2>A plan meeting your criteria (<= 12.4¢/kWh) was found.</h2>
-            <p>Here are the top 5 results:</p>
-            {df_email.to_html(escape=False, index=False)}
-          </body>
-        </html>
-        """
+        return EmailTemplate.create_html_body(
+            title="Power to Choose - Electricity Plan Alert",
+            message="A plan meeting your criteria (<= 12.4¢/kWh) was found. Here are the top 5 results:",
+            table_html=df_email.to_html(escape=False, index=False)
+        )
     
     async def scrape_data(self, page) -> list:
         """Scrape electricity plan data from Power to Choose"""
@@ -101,10 +98,6 @@ class PowerToChooseScraper(PriceAlertScraper):
             
         return results_data
 
-def main():
-    """Main entry point for Power to Choose scraper"""
+if __name__ == "__main__":
     scraper = PowerToChooseScraper()
     run_async_scraper(scraper)
-
-if __name__ == "__main__":
-    main()

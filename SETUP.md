@@ -88,6 +88,14 @@ VDA_CHILDREN=2                        # Number of children
 VDA_PRICE_THRESHOLD=1100             # Price threshold (USD)
 ```
 
+### Alaska Airlines (Award Tickets)
+```bash
+ALASKA_DEPARTURE=DFW                  # Departure airport code
+ALASKA_ARRIVAL_STATIONS=SNA,ONT       # Target arrival airports (comma-separated)
+ALASKA_TARGET_POINTS=7500             # Target points threshold
+ALASKA_SEARCH_DATE=2025-11-14         # Search date (YYYY-MM-DD)
+```
+
 ### Web Scraping (Advanced)
 ```bash
 SCRAPING_TIMEOUT=60000                # Page load timeout (ms)
@@ -105,6 +113,9 @@ BROWSER_NO_SANDBOX=true               # Docker compatibility
 
 # Run daily at 9 AM
 0 9 * * * cd /path/to/price-alert && python run_scraper.py villa_del_arco
+
+# Run Alaska Airlines every 2 hours
+0 */2 * * * cd /path/to/price-alert && python run_scraper.py alaska_award_ticket
 
 # Run all scrapers daily at 6 AM
 0 6 * * * cd /path/to/price-alert && python run_scraper.py all

@@ -65,6 +65,36 @@ class PriceAlertScraper(ABC):
         """
         pass
 
+class EmailTemplate:
+    """Base class for email templates with common HTML structure."""
+    
+    @staticmethod
+    def create_html_body(title: str, message: str, table_html: str, booking_url: str = None) -> str:
+        """Create standardized HTML email body"""
+        booking_link = ""
+        if booking_url:
+            booking_link = f'<p><a href="{booking_url}">Click here to book</a></p>'
+        
+        return f"""
+        <html>
+          <head>
+            <style>
+              body {{ font-family: sans-serif; }}
+              table {{ border-collapse: collapse; width: 100%; }}
+              th, td {{ border: 1px solid #dddddd; text-align: left; padding: 8px; }}
+              th {{ background-color: #f2f2f2; }}
+              tr:nth-child(even) {{ background-color: #f9f9f9; }}
+            </style>
+          </head>
+          <body>
+            <h2>{title}</h2>
+            <p>{message}</p>
+            {table_html}
+            {booking_link}
+          </body>
+        </html>
+        """
+
 class EmailSender:
     """Handles email sending functionality."""
     

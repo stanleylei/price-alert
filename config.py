@@ -25,7 +25,8 @@ POWER_TO_CHOOSE_CONFIG = {
     "contract_min_months": os.getenv("PTC_CONTRACT_MIN", "12"),
     "contract_max_months": os.getenv("PTC_CONTRACT_MAX", "60"),
     "price_threshold_cents": float(os.getenv("PTC_PRICE_THRESHOLD", "12.4")),
-    "max_results": int(os.getenv("PTC_MAX_RESULTS", "5"))
+    "max_results": int(os.getenv("PTC_MAX_RESULTS", "5")),
+    "base_url": os.getenv("PTC_BASE_URL", "https://www.powertochoose.org/en-us")
 }
 
 # Villa del Arco Configuration
@@ -34,7 +35,17 @@ VILLA_DEL_ARCO_CONFIG = {
     "check_out_date": os.getenv("VDA_CHECK_OUT", "2025-12-19"),
     "adults": int(os.getenv("VDA_ADULTS", "2")),
     "children": int(os.getenv("VDA_CHILDREN", "2")),
-    "price_threshold_usd": int(os.getenv("VDA_PRICE_THRESHOLD", "1100"))
+    "price_threshold_usd": int(os.getenv("VDA_PRICE_THRESHOLD", "1100")),
+    "base_url": os.getenv("VDA_BASE_URL", "https://booking.villadelarco.com/bookcore/availability/villarco/{check_in}/{check_out}/{adults}/{children}/?lang=en&rrc=1&adults={adults}&ninos={children}")
+}
+
+# Alaska Airlines Award Ticket Configuration
+ALASKA_AWARD_TICKET_CONFIG = {
+    "departure_station": os.getenv("ALASKA_DEPARTURE", "DFW"),
+    "target_arrival_stations": os.getenv("ALASKA_ARRIVAL_STATIONS", "SNA,ONT").split(","),
+    "target_points": int(os.getenv("ALASKA_TARGET_POINTS", "7500")),
+    "search_date": os.getenv("ALASKA_SEARCH_DATE", "2025-11-14"),
+    "base_search_url": os.getenv("ALASKA_BASE_SEARCH_URL", "https://www.alaskaair.com/search/results?A=3&C=2&L=0&O={departure}&D={arrival}&OD={date}&RT=false&ShoppingMethod=onlineaward")
 }
 
 # Web Scraping Configuration
@@ -50,17 +61,45 @@ def get_config(scraper_name: str) -> Dict[str, Any]:
     Get configuration for a specific scraper.
     
     Args:
-        scraper_name: Name of the scraper ('power_to_choose' or 'villa_del_arco')
+        scraper_name: Name of the scraper ('power_to_choose', 'villa_del_arco', or 'alaska_award_ticket')
         
     Returns:
         Dictionary containing the scraper's configuration
     """
     configs = {
         "power_to_choose": POWER_TO_CHOOSE_CONFIG,
-        "villa_del_arco": VILLA_DEL_ARCO_CONFIG
+        "villa_del_arco": VILLA_DEL_ARCO_CONFIG,
+        "alaska_award_ticket": ALASKA_AWARD_TICKET_CONFIG
     }
     
-    return configs.get(scraper_name, {})
+    config = configs.get(scraper_name, {})
+    
+    # Map config keys to match scraper constructor parameters
+    if scraper_name == "power_to_choose":
+        return {
+            "zip_code": config["zip_code"],
+            "contract_min": config["contract_min_months"],
+            "contract_max": config["contract_max_months"],
+            "base_url": config["base_url"]
+        }
+    elif scraper_name == "villa_del_arco":
+        return {
+            "check_in_date": config["check_in_date"],
+            "check_out_date": config["check_out_date"],
+            "adults": config["adults"],
+            "children": config["children"],
+            "base_url": config["base_url"]
+        }
+    elif scraper_name == "alaska_award_ticket":
+        return {
+            "departure_station": config["departure_station"],
+            "target_arrival_stations": config["target_arrival_stations"],
+            "target_points": config["target_points"],
+            "search_date": config["search_date"],
+            "base_search_url": config["base_search_url"]
+        }
+    
+    return config
 
 def get_email_config() -> Dict[str, Any]:
     """Get email configuration"""

@@ -37,7 +37,10 @@ docker-compose up power-to-choose && docker-compose down
 # Run Villa del Arco scraper (runs once and exits)
 docker-compose up villa-del-arco && docker-compose down
 
-# Run both scrapers sequentially (runs once and exits)
+# Run Alaska Airlines scraper (runs once and exits)
+docker-compose up alaska-award-ticket && docker-compose down
+
+# Run all scrapers sequentially (runs once and exits)
 docker-compose up all && docker-compose down
 ```
 
@@ -52,7 +55,10 @@ docker-compose up power-to-choose
 # Run only Villa del Arco scraper (runs once and exits)
 docker-compose up villa-del-arco
 
-# Run both scrapers sequentially (runs once and exits)
+# Run only Alaska Airlines scraper (runs once and exits)
+docker-compose up alaska-award-ticket
+
+# Run all scrapers sequentially (runs once and exits)
 docker-compose up all
 ```
 
@@ -89,6 +95,9 @@ For production scheduled jobs, use these commands:
 # Run Villa del Arco scraper daily at 9 AM
 0 9 * * * cd /path/to/your/project && docker-compose up villa-del-arco && docker-compose down
 
+# Run Alaska Airlines scraper every 2 hours
+0 */2 * * * cd /path/to/your/project && docker-compose up alaska-award-ticket && docker-compose down
+
 # Run all scrapers daily at 6 AM
 0 6 * * * cd /path/to/your/project && docker-compose up all && docker-compose down
 ```
@@ -121,6 +130,12 @@ VDA_CHECK_OUT=2025-01-18
 VDA_ADULTS=4
 VDA_CHILDREN=0
 VDA_PRICE_THRESHOLD=1200
+
+# Alaska Airlines Configuration
+ALASKA_DEPARTURE=DFW
+ALASKA_ARRIVAL_STATIONS=SNA,ONT
+ALASKA_TARGET_POINTS=7500
+ALASKA_SEARCH_DATE=2025-11-14
 ```
 
 Then run:
@@ -132,7 +147,7 @@ docker-compose up power-to-choose && docker-compose down
 ## Environment Variables Reference
 
 ### Core Configuration
-- `SCRAPER_NAME` - Which scraper to run (`power_to_choose`, `villa_del_arco`, or `all`)
+- `SCRAPER_NAME` - Which scraper to run (`power_to_choose`, `villa_del_arco`, `alaska_award_ticket`, or `all`)
 - `SENDER_EMAIL` - Gmail address for sending emails
 - `SENDER_PASSWORD` - Gmail app password
 - `RECIPIENT_EMAIL` - Email address to receive alerts
@@ -150,6 +165,12 @@ docker-compose up power-to-choose && docker-compose down
 - `VDA_ADULTS` - Number of adults (default: 2)
 - `VDA_CHILDREN` - Number of children (default: 2)
 - `VDA_PRICE_THRESHOLD` - Price threshold in USD (default: 1100)
+
+### Alaska Airlines Configuration
+- `ALASKA_DEPARTURE` - Departure airport code (default: DFW)
+- `ALASKA_ARRIVAL_STATIONS` - Target arrival airports, comma-separated (default: SNA,ONT)
+- `ALASKA_TARGET_POINTS` - Target points threshold (default: 7500)
+- `ALASKA_SEARCH_DATE` - Search date (YYYY-MM-DD) (default: 2025-11-14)
 
 ### Web Scraping Configuration (Advanced)
 - `SCRAPING_TIMEOUT` - Maximum time to wait for page load in milliseconds (default: 60000)

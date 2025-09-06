@@ -4,7 +4,7 @@ Refactored to use the modular price alert core.
 """
 
 import re
-from price_alert_core import PriceAlertScraper, run_async_scraper
+from price_alert_core import PriceAlertScraper, run_async_scraper, EmailTemplate
 
 class VillaDelArcoScraper(PriceAlertScraper):
     """
@@ -16,15 +16,22 @@ class VillaDelArcoScraper(PriceAlertScraper):
                  check_in_date: str = "2025-12-16",
                  check_out_date: str = "2025-12-19",
                  adults: int = 2,
-                 children: int = 2):
+                 children: int = 2,
+                 base_url: str = None):
         super().__init__()
         self.check_in_date = check_in_date
         self.check_out_date = check_out_date
         self.adults = adults
         self.children = children
+        self.base_url = base_url or "https://booking.villadelarco.com/bookcore/availability/villarco/{check_in}/{check_out}/{adults}/{children}/?lang=en&rrc=1&adults={adults}&ninos={children}"
     
     def get_scraping_url(self) -> str:
-        return f"https://booking.villadelarco.com/bookcore/availability/villarco/{self.check_in_date}/{self.check_out_date}/{self.adults}/{self.children}/?lang=en&rrc=1&adults={self.adults}&ninos={self.children}"
+        return self.base_url.format(
+            check_in=self.check_in_date,
+            check_out=self.check_out_date,
+            adults=self.adults,
+            children=self.children
+        )
     
     def get_email_subject(self) -> str:
         return "Price Alert: Villa del Arco All-Inclusive Plan Below $1,100"
@@ -44,29 +51,12 @@ class VillaDelArcoScraper(PriceAlertScraper):
         # Reorder columns to make 'Alert' the first column
         df_email = df_email[['Alert', 'Room Name', 'Rate Name', 'Board Type', 'Price (USD)']]
         
-        return f"""
-        <html>
-          <head>
-            <style>
-              body {{ font-family: sans-serif; }}
-              table {{ border-collapse: collapse; width: 100%; }}
-              th, td {{ border: 1px solid #dddddd; text-align: left; padding: 8px; }}
-              th {{ background-color: #f2f2f2; }}
-              tr:nth-child(even) {{ background-color: #f9f9f9; }}
-            </style>
-          </head>
-          <body>
-            <h2>An All-Inclusive plan below your $1,100 threshold was found.</h2>
-            <p>See the full list of available plans below. Matching plans are marked with '✅'.</p>
-            {df_email.to_html(escape=False, index=False)}
-            <p>
-                <a href="{self.get_scraping_url()}">
-                Click here to book
-                </a>
-            </p>
-          </body>
-        </html>
-        """
+        return EmailTemplate.create_html_body(
+            title="Price Alert: Villa del Arco All-Inclusive Plan Below $1,100",
+            message="An All-Inclusive plan below your $1,100 threshold was found. See the full list of available plans below. Matching plans are marked with '✅'.",
+            table_html=df_email.to_html(escape=False, index=False),
+            booking_url=self.get_scraping_url()
+        )
     
     async def scrape_data(self, page) -> list:
         """Scrape hotel room and pricing data from Villa del Arco"""
@@ -111,10 +101,6 @@ class VillaDelArcoScraper(PriceAlertScraper):
             
         return results_data
 
-def main():
-    """Main entry point for Villa del Arco scraper"""
+if __name__ == "__main__":
     scraper = VillaDelArcoScraper()
     run_async_scraper(scraper)
-
-if __name__ == "__main__":
-    main()

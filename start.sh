@@ -51,6 +51,9 @@ case "$SCRAPER_NAME" in
     "villa_del_arco")
         run_scraper "villa_del_arco"
         ;;
+    "alaska_award_ticket")
+        run_scraper "alaska_award_ticket"
+        ;;
     "all"|"")
         echo "Running all scrapers sequentially..."
         echo ""
@@ -66,27 +69,36 @@ case "$SCRAPER_NAME" in
         vda_exit_code=$?
         
         echo ""
+        
+        # Run Alaska Award Ticket scraper
+        run_scraper "alaska_award_ticket"
+        alaska_exit_code=$?
+        
+        echo ""
         echo "=== All Scrapers Completed ==="
-        if [ $ptc_exit_code -eq 0 ] && [ $vda_exit_code -eq 0 ]; then
+        if [ $ptc_exit_code -eq 0 ] && [ $vda_exit_code -eq 0 ] && [ $alaska_exit_code -eq 0 ]; then
             echo "✓ All scrapers completed successfully"
             exit 0
         else
             echo "⚠ Some scrapers had issues:"
             [ $ptc_exit_code -ne 0 ] && echo "  - Power to Choose: Failed"
             [ $vda_exit_code -ne 0 ] && echo "  - Villa del Arco: Failed"
+            [ $alaska_exit_code -ne 0 ] && echo "  - Alaska Award Ticket: Failed"
             exit 1
         fi
         ;;
     *)
         echo "Error: Unknown scraper '$SCRAPER_NAME'"
         echo "Available options:"
-        echo "  power_to_choose  - Run only Power to Choose scraper"
-        echo "  villa_del_arco   - Run only Villa del Arco scraper"
-        echo "  all              - Run all scrapers (default)"
+        echo "  power_to_choose      - Run only Power to Choose scraper"
+        echo "  villa_del_arco       - Run only Villa del Arco scraper"
+        echo "  alaska_award_ticket  - Run only Alaska Award Ticket scraper"
+        echo "  all                  - Run all scrapers (default)"
         echo ""
         echo "Usage examples:"
         echo "  docker run -e SCRAPER_NAME=power_to_choose your-image"
         echo "  docker run -e SCRAPER_NAME=villa_del_arco your-image"
+        echo "  docker run -e SCRAPER_NAME=alaska_award_ticket your-image"
         echo "  docker run your-image  # Runs all scrapers by default"
         exit 1
         ;;

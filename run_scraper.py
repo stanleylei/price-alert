@@ -11,7 +11,24 @@ from typing import Optional
 from price_alert_core import PriceAlertScraper, run_async_scraper
 from power_to_choose_scraper import PowerToChooseScraper
 from villa_del_arco_scraper import VillaDelArcoScraper
+from alaska_award_ticket_scraper import AlaskaAwardTicketScraper
 from config import get_config
+
+# Centralized scraper registry
+SCRAPER_REGISTRY = {
+    "power_to_choose": {
+        "class": PowerToChooseScraper,
+        "description": "Monitor electricity plan prices from Power to Choose"
+    },
+    "villa_del_arco": {
+        "class": VillaDelArcoScraper,
+        "description": "Monitor hotel prices from Villa del Arco"
+    },
+    "alaska_award_ticket": {
+        "class": AlaskaAwardTicketScraper,
+        "description": "Monitor Alaska Airlines award ticket availability (7.5k points)"
+    }
+}
 
 def create_scraper(scraper_name: str) -> Optional[PriceAlertScraper]:
     """
@@ -23,31 +40,20 @@ def create_scraper(scraper_name: str) -> Optional[PriceAlertScraper]:
     Returns:
         PriceAlertScraper instance or None if invalid name
     """
-    if scraper_name == "power_to_choose":
-        config = get_config("power_to_choose")
-        return PowerToChooseScraper(
-            zip_code=config["zip_code"],
-            contract_min=config["contract_min_months"],
-            contract_max=config["contract_max_months"]
-        )
-    elif scraper_name == "villa_del_arco":
-        config = get_config("villa_del_arco")
-        return VillaDelArcoScraper(
-            check_in_date=config["check_in_date"],
-            check_out_date=config["check_out_date"],
-            adults=config["adults"],
-            children=config["children"]
-        )
-    else:
+    scraper_info = SCRAPER_REGISTRY.get(scraper_name)
+    if not scraper_info:
         return None
+    
+    config = get_config(scraper_name)
+    return scraper_info["class"](**config)
 
 def list_available_scrapers():
     """List all available scrapers"""
     print("Available scrapers:")
-    print("  power_to_choose  - Monitor electricity plan prices from Power to Choose")
-    print("  villa_del_arco   - Monitor hotel prices from Villa del Arco")
+    for name, info in SCRAPER_REGISTRY.items():
+        print(f"  {name:<20} - {info['description']}")
     print("\nUsage: python run_scraper.py <scraper_name>")
-    print("Example: python run_scraper.py power_to_choose")
+    print("Example: python run_scraper.py alaska_award_ticket")
 
 def main():
     """Main entry point"""
@@ -58,6 +64,7 @@ def main():
 Examples:
   python run_scraper.py power_to_choose
   python run_scraper.py villa_del_arco
+  python run_scraper.py alaska_award_ticket
   python run_scraper.py --list
         """
     )
@@ -90,6 +97,7 @@ Examples:
         print("Current configuration:")
         print(f"Power to Choose: {get_config('power_to_choose')}")
         print(f"Villa del Arco: {get_config('villa_del_arco')}")
+        print(f"Alaska Award Ticket: {get_config('alaska_award_ticket')}")
         return
     
     if not args.scraper_name:
