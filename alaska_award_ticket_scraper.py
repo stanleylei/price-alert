@@ -13,46 +13,57 @@ class AlaskaAwardTicketScraper(PriceAlertScraper):
     """
     
     def __init__(self, 
-                 departure_station: str = "DFW",
-                 target_arrival_stations: list = None,
+                 departure_stations: list = None,
+                 arrival_stations: list = None,
+                 adults: int = 3,
+                 children: int = 2,
                  target_points: int = 7500,
                  search_date: str = "2025-11-14",
                  base_search_url: str = None):
         super().__init__()
-        self.departure_station = departure_station
-        self.target_arrival_stations = target_arrival_stations or ["SNA", "ONT"]
+        self.departure_stations = departure_stations or ["DFW"]
+        self.arrival_stations = arrival_stations or ["SNA", "ONT"]
+        self.adults = adults
+        self.children = children
         self.target_points = target_points
         self.search_date = search_date
-        self.base_search_url = base_search_url or "https://www.alaskaair.com/search/results?A=3&C=2&L=0&O={departure}&D={arrival}&OD={date}&RT=false&ShoppingMethod=onlineaward"
+        self.base_search_url = base_search_url or "https://www.alaskaair.com/search/results?A={adults}&C={children}&L=0&O={departure}&D={arrival}&OD={date}&RT=false&ShoppingMethod=onlineaward"
     
     def get_scraping_url(self) -> str:
         """Return the first search URL (for backward compatibility)"""
-        if self.target_arrival_stations:
-            return self._build_search_url(self.target_arrival_stations[0])
+        if self.departure_stations and self.arrival_stations:
+            return self._build_search_url(self.departure_stations[0], self.arrival_stations[0])
         return self.base_search_url.format(
-            departure=self.departure_station,
-            arrival="LA5",  # fallback
+            adults=self.adults,
+            children=self.children,
+            departure="DFW",  # fallback
+            arrival="SNA",    # fallback
             date=self.search_date
         )
     
-    def _build_search_url(self, arrival_station: str) -> str:
-        """Build search URL for a specific arrival station"""
+    def _build_search_url(self, departure_station: str, arrival_station: str) -> str:
+        """Build search URL for a specific departure and arrival station"""
         return self.base_search_url.format(
-            departure=self.departure_station,
+            adults=self.adults,
+            children=self.children,
+            departure=departure_station,
             arrival=arrival_station,
             date=self.search_date
         )
     
     def get_email_subject(self) -> str:
-        return "Alaska Airlines Alert: 7.5k Points Available for DFW → SNA/ONT"
+        departure_str = ",".join(self.departure_stations)
+        arrival_str = ",".join(self.arrival_stations)
+        return f"Alaska Airlines Alert: {self.target_points} Points Available for {departure_str} → {arrival_str}"
     
     def check_alert_condition(self, df) -> bool:
-        """Check if any route has 7.5k points for target arrival stations"""
+        """Check if any route has target points for target departure/arrival station combinations"""
         if df.empty:
             return False
         
         condition = (
-            (df['Arrival Station'].isin(self.target_arrival_stations)) & 
+            (df['Departure Station'].isin(self.departure_stations)) &
+            (df['Arrival Station'].isin(self.arrival_stations)) & 
             (df['Points'] <= self.target_points)
         )
         return condition.any()
@@ -61,7 +72,8 @@ class AlaskaAwardTicketScraper(PriceAlertScraper):
         """Generate HTML email body for Alaska Airlines results"""
         df_email = df.copy()
         condition = (
-            (df_email['Arrival Station'].isin(self.target_arrival_stations)) & 
+            (df_email['Departure Station'].isin(self.departure_stations)) &
+            (df_email['Arrival Station'].isin(self.arrival_stations)) & 
             (df_email['Points'] <= self.target_points)
         )
         df_email['Alert'] = condition.apply(lambda x: '✅' if x else '')
@@ -70,61 +82,91 @@ class AlaskaAwardTicketScraper(PriceAlertScraper):
                   'Arrival Time', 'Points', 'Price (USD)', 'Flight Number']
         df_email = df_email[columns]
         
+        departure_str = ",".join(self.departure_stations)
+        arrival_str = ",".join(self.arrival_stations)
+        
+        # Create configuration information section
+        config_info = f"""
+        <div class="config-item">
+            <span class="config-label">Search Date:</span> {self.search_date}
+        </div>
+        <div class="config-item">
+            <span class="config-label">Departure Stations:</span> {departure_str}
+        </div>
+        <div class="config-item">
+            <span class="config-label">Arrival Stations:</span> {arrival_str}
+        </div>
+        <div class="config-item">
+            <span class="config-label">Passengers:</span> {self.adults} adults, {self.children} children
+        </div>
+        <div class="config-item">
+            <span class="config-label">Target Points:</span> {self.target_points:,} points or less
+        </div>
+        """
+        
         return EmailTemplate.create_html_body(
             title="Alaska Airlines Award Ticket Alert",
-            message="Found flights with 7.5k points or less for DFW → SNA/ONT routes! Currently monitoring for SNA and ONT routes. Matching routes are marked with '✅'.",
+            message=f"Found flights with {self.target_points:,} points or less for {departure_str} → {arrival_str} routes! Matching routes are marked with '✅'.",
             table_html=df_email.to_html(escape=False, index=False, classes='alert-row'),
-            booking_url=self.get_scraping_url()
+            booking_url=self.get_scraping_url(),
+            config_info=config_info
         )
     
     async def scrape_data(self, page) -> list:
-        """Scrape flight data from Alaska Airlines award search results for all target airports"""
+        """Scrape flight data from Alaska Airlines award search results for all departure/arrival combinations"""
         all_results = []
         
-        for arrival_station in self.target_arrival_stations:
-            print(f"\n--- Searching for {self.departure_station} → {arrival_station} ---")
-            
-            try:
-                # Navigate to the specific search URL
-                search_url = self._build_search_url(arrival_station)
-                print(f"Navigating to: {search_url}")
-                await page.goto(search_url, timeout=60000)
+        # Generate all departure/arrival combinations
+        total_combinations = len(self.departure_stations) * len(self.arrival_stations)
+        current_combination = 0
+        
+        for departure_station in self.departure_stations:
+            for arrival_station in self.arrival_stations:
+                current_combination += 1
+                print(f"\n--- Searching for {departure_station} → {arrival_station} ({current_combination}/{total_combinations}) ---")
                 
-                # Wait for page to load
-                print("Waiting for page to load...")
-                await page.wait_for_load_state('networkidle', timeout=30000)
-                print("Page loaded. Looking for flight data...")
-                
-                # Wait for matrix rows to appear
                 try:
-                    await page.locator('[data-testid="matrix-row"]').first.wait_for(timeout=30000)
-                    print("Found matrix rows, extracting data...")
-                except Exception as e:
-                    print(f"Matrix rows not found for {arrival_station}: {e}")
-                    continue
-                
-                # Extract data from all matrix rows
-                matrix_rows = await page.locator('[data-testid="matrix-row"]').all()
-                print(f"Found {len(matrix_rows)} matrix rows for {arrival_station}")
-                
-                station_results = []
-                for row in matrix_rows:
+                    # Navigate to the specific search URL
+                    search_url = self._build_search_url(departure_station, arrival_station)
+                    print(f"Navigating to: {search_url}")
+                    await page.goto(search_url, timeout=60000)
+                    
+                    # Wait for page to load
+                    print("Waiting for page to load...")
+                    await page.wait_for_load_state('networkidle', timeout=30000)
+                    print("Page loaded. Looking for flight data...")
+                    
+                    # Wait for matrix rows to appear
                     try:
-                        row_data = await self._extract_row_data(row)
-                        if row_data:
-                            # Ensure the arrival station matches what we're searching for
-                            if row_data.get("Arrival Station") == arrival_station:
-                                station_results.append(row_data)
+                        await page.locator('[data-testid="matrix-row"]').first.wait_for(timeout=30000)
+                        print("Found matrix rows, extracting data...")
                     except Exception as e:
-                        print(f"Error extracting row data: {e}")
+                        print(f"Matrix rows not found for {departure_station} → {arrival_station}: {e}")
                         continue
-                
-                print(f"Found {len(station_results)} flights for {arrival_station}")
-                all_results.extend(station_results)
-                
-            except Exception as e:
-                print(f"Error searching for {arrival_station}: {e}")
-                continue
+                    
+                    # Extract data from all matrix rows
+                    matrix_rows = await page.locator('[data-testid="matrix-row"]').all()
+                    print(f"Found {len(matrix_rows)} matrix rows for {departure_station} → {arrival_station}")
+                    
+                    route_results = []
+                    for row in matrix_rows:
+                        try:
+                            row_data = await self._extract_row_data(row)
+                            if row_data:
+                                # Ensure the departure and arrival stations match what we're searching for
+                                if (row_data.get("Departure Station") == departure_station and 
+                                    row_data.get("Arrival Station") == arrival_station):
+                                    route_results.append(row_data)
+                        except Exception as e:
+                            print(f"Error extracting row data: {e}")
+                            continue
+                    
+                    print(f"Found {len(route_results)} flights for {departure_station} → {arrival_station}")
+                    all_results.extend(route_results)
+                    
+                except Exception as e:
+                    print(f"Error searching for {departure_station} → {arrival_station}: {e}")
+                    continue
         
         print(f"\nTotal flights found across all searches: {len(all_results)}")
         return all_results

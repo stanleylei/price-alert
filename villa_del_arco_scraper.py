@@ -17,12 +17,14 @@ class VillaDelArcoScraper(PriceAlertScraper):
                  check_out_date: str = "2025-12-19",
                  adults: int = 2,
                  children: int = 2,
+                 price_threshold_usd: int = 1100,
                  base_url: str = None):
         super().__init__()
         self.check_in_date = check_in_date
         self.check_out_date = check_out_date
         self.adults = adults
         self.children = children
+        self.price_threshold_usd = price_threshold_usd
         self.base_url = base_url or "https://booking.villadelarco.com/bookcore/availability/villarco/{check_in}/{check_out}/{adults}/{children}/?lang=en&rrc=1&adults={adults}&ninos={children}"
     
     def get_scraping_url(self) -> str:
@@ -37,25 +39,45 @@ class VillaDelArcoScraper(PriceAlertScraper):
         return "Price Alert: Villa del Arco All-Inclusive Plan Below $1,100"
     
     def check_alert_condition(self, df) -> bool:
-        """Check if any All-Inclusive plan is below $1,100"""
-        condition = (df['Board Type'] == 'All Inclusive') & (df['Price (USD)'] < 1100)
+        """Check if any All-Inclusive plan is below the price threshold"""
+        condition = (df['Board Type'] == 'All Inclusive') & (df['Price (USD)'] < self.price_threshold_usd)
         return condition.any()
     
     def get_email_body(self, df) -> str:
         """Generate HTML email body for Villa del Arco results"""
         # Add the 'Alert' column with a checkmark for matching rows
         df_email = df.copy()
-        condition = (df_email['Board Type'] == 'All Inclusive') & (df_email['Price (USD)'] < 1100)
+        condition = (df_email['Board Type'] == 'All Inclusive') & (df_email['Price (USD)'] < self.price_threshold_usd)
         df_email['Alert'] = condition.apply(lambda x: '✅' if x else '')
         
         # Reorder columns to make 'Alert' the first column
         df_email = df_email[['Alert', 'Room Name', 'Rate Name', 'Board Type', 'Price (USD)']]
         
+        # Create configuration information section
+        config_info = f"""
+        <div class="config-item">
+            <span class="config-label">Check-in Date:</span> {self.check_in_date}
+        </div>
+        <div class="config-item">
+            <span class="config-label">Check-out Date:</span> {self.check_out_date}
+        </div>
+        <div class="config-item">
+            <span class="config-label">Guests:</span> {self.adults} adults, {self.children} children
+        </div>
+        <div class="config-item">
+            <span class="config-label">Price Threshold:</span> ${self.price_threshold_usd:,} or less
+        </div>
+        <div class="config-item">
+            <span class="config-label">Target Plan:</span> All-Inclusive
+        </div>
+        """
+        
         return EmailTemplate.create_html_body(
-            title="Price Alert: Villa del Arco All-Inclusive Plan Below $1,100",
-            message="An All-Inclusive plan below your $1,100 threshold was found. See the full list of available plans below. Matching plans are marked with '✅'.",
+            title="Price Alert: Villa del Arco All-Inclusive Plan Below Threshold",
+            message=f"An All-Inclusive plan below your ${self.price_threshold_usd:,} threshold was found. See the full list of available plans below. Matching plans are marked with '✅'.",
             table_html=df_email.to_html(escape=False, index=False),
-            booking_url=self.get_scraping_url()
+            booking_url=self.get_scraping_url(),
+            config_info=config_info
         )
     
     async def scrape_data(self, page) -> list:

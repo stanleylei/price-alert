@@ -69,26 +69,50 @@ class EmailTemplate:
     """Base class for email templates with common HTML structure."""
     
     @staticmethod
-    def create_html_body(title: str, message: str, table_html: str, booking_url: str = None) -> str:
-        """Create standardized HTML email body"""
+    def create_html_body(title: str, message: str, table_html: str, booking_url: str = None, config_info: str = None) -> str:
+        """
+        Create standardized HTML email body with optional configuration information.
+        
+        Args:
+            title: Email title
+            message: Main message content
+            table_html: HTML table with results
+            booking_url: Optional booking URL
+            config_info: Optional configuration information to display
+        """
         booking_link = ""
         if booking_url:
-            booking_link = f'<p><a href="{booking_url}">Click here to book</a></p>'
+            booking_link = f'<p><a href="{booking_url}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">Click here to book</a></p>'
+        
+        config_section = ""
+        if config_info:
+            config_section = f"""
+            <div style="background-color: #f8f9fa; padding: 15px; border-left: 4px solid #007bff; margin: 20px 0;">
+                <h3 style="margin-top: 0; color: #007bff;">Search Configuration</h3>
+                {config_info}
+            </div>
+            """
         
         return f"""
         <html>
           <head>
             <style>
-              body {{ font-family: sans-serif; }}
-              table {{ border-collapse: collapse; width: 100%; }}
-              th, td {{ border: 1px solid #dddddd; text-align: left; padding: 8px; }}
-              th {{ background-color: #f2f2f2; }}
+              body {{ font-family: Arial, sans-serif; margin: 20px; }}
+              table {{ border-collapse: collapse; width: 100%; margin: 20px 0; }}
+              th, td {{ border: 1px solid #dddddd; text-align: left; padding: 12px; }}
+              th {{ background-color: #f2f2f2; font-weight: bold; }}
               tr:nth-child(even) {{ background-color: #f9f9f9; }}
+              .alert-row {{ background-color: #d4edda !important; }}
+              h2 {{ color: #333; }}
+              h3 {{ color: #007bff; }}
+              .config-item {{ margin: 5px 0; }}
+              .config-label {{ font-weight: bold; color: #555; }}
             </style>
           </head>
           <body>
             <h2>{title}</h2>
             <p>{message}</p>
+            {config_section}
             {table_html}
             {booking_link}
           </body>

@@ -90,8 +90,10 @@ VDA_PRICE_THRESHOLD=1100             # Price threshold (USD)
 
 ### Alaska Airlines (Award Tickets)
 ```bash
-ALASKA_DEPARTURE=DFW                  # Departure airport code
-ALASKA_ARRIVAL_STATIONS=SNA,ONT       # Target arrival airports (comma-separated)
+ALASKA_DEPARTURE_STATIONS=DFW         # Departure airport codes (comma-separated)
+ALASKA_ARRIVAL_STATIONS=SNA,ONT       # Arrival airports (comma-separated)
+ALASKA_ADULTS=3                       # Number of adults
+ALASKA_CHILDREN=2                     # Number of children
 ALASKA_TARGET_POINTS=7500             # Target points threshold
 ALASKA_SEARCH_DATE=2025-11-14         # Search date (YYYY-MM-DD)
 ```

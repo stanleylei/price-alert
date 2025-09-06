@@ -132,8 +132,10 @@ VDA_CHILDREN=0
 VDA_PRICE_THRESHOLD=1200
 
 # Alaska Airlines Configuration
-ALASKA_DEPARTURE=DFW
+ALASKA_DEPARTURE_STATIONS=DFW
 ALASKA_ARRIVAL_STATIONS=SNA,ONT
+ALASKA_ADULTS=3
+ALASKA_CHILDREN=2
 ALASKA_TARGET_POINTS=7500
 ALASKA_SEARCH_DATE=2025-11-14
 ```
@@ -167,8 +169,10 @@ docker-compose up power-to-choose && docker-compose down
 - `VDA_PRICE_THRESHOLD` - Price threshold in USD (default: 1100)
 
 ### Alaska Airlines Configuration
-- `ALASKA_DEPARTURE` - Departure airport code (default: DFW)
-- `ALASKA_ARRIVAL_STATIONS` - Target arrival airports, comma-separated (default: SNA,ONT)
+- `ALASKA_DEPARTURE_STATIONS` - Departure airport codes, comma-separated (default: DFW)
+- `ALASKA_ARRIVAL_STATIONS` - Arrival airports, comma-separated (default: SNA,ONT)
+- `ALASKA_ADULTS` - Number of adults (default: 3)
+- `ALASKA_CHILDREN` - Number of children (default: 2)
 - `ALASKA_TARGET_POINTS` - Target points threshold (default: 7500)
 - `ALASKA_SEARCH_DATE` - Search date (YYYY-MM-DD) (default: 2025-11-14)
 

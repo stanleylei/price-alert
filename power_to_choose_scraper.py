@@ -12,11 +12,13 @@ class PowerToChooseScraper(PriceAlertScraper):
     Monitors for plans with prices <= 12.4¢/kWh.
     """
     
-    def __init__(self, zip_code: str = "76092", contract_min: str = "12", contract_max: str = "60", base_url: str = None):
+    def __init__(self, zip_code: str = "76092", contract_min: str = "12", contract_max: str = "60", price_threshold_cents: float = 12.4, max_results: int = 5, base_url: str = None):
         super().__init__()
         self.zip_code = zip_code
         self.contract_min = contract_min
         self.contract_max = contract_max
+        self.price_threshold_cents = price_threshold_cents
+        self.max_results = max_results
         self.base_url = base_url or "https://www.powertochoose.org/en-us"
     
     def get_scraping_url(self) -> str:
@@ -26,8 +28,8 @@ class PowerToChooseScraper(PriceAlertScraper):
         return "Power to Choose - Electricity Plan Alert"
     
     def check_alert_condition(self, df) -> bool:
-        """Check if any plan has price <= 12.4¢/kWh"""
-        return any(df["Price 1,000 kWh"] <= 12.4)
+        """Check if any plan has price <= threshold"""
+        return any(df["Price 1,000 kWh"] <= self.price_threshold_cents)
     
     def get_email_body(self, df) -> str:
         """Generate HTML email body for Power to Choose results"""
@@ -40,10 +42,27 @@ class PowerToChooseScraper(PriceAlertScraper):
             lambda url: f'<a href="{url}" target="_blank">Link</a>'
         )
 
+        # Create configuration information section
+        config_info = f"""
+        <div class="config-item">
+            <span class="config-label">ZIP Code:</span> {self.zip_code}
+        </div>
+        <div class="config-item">
+            <span class="config-label">Contract Length:</span> {self.contract_min} - {self.contract_max} months
+        </div>
+        <div class="config-item">
+            <span class="config-label">Price Threshold:</span> {self.price_threshold_cents}¢/kWh or less
+        </div>
+        <div class="config-item">
+            <span class="config-label">Max Results:</span> {self.max_results} plans
+        </div>
+        """
+
         return EmailTemplate.create_html_body(
             title="Power to Choose - Electricity Plan Alert",
-            message="A plan meeting your criteria (<= 12.4¢/kWh) was found. Here are the top 5 results:",
-            table_html=df_email.to_html(escape=False, index=False)
+            message=f"A plan meeting your criteria (<= {self.price_threshold_cents}¢/kWh) was found. Here are the top {self.max_results} results:",
+            table_html=df_email.to_html(escape=False, index=False),
+            config_info=config_info
         )
     
     async def scrape_data(self, page) -> list:

@@ -41,11 +41,13 @@ VILLA_DEL_ARCO_CONFIG = {
 
 # Alaska Airlines Award Ticket Configuration
 ALASKA_AWARD_TICKET_CONFIG = {
-    "departure_station": os.getenv("ALASKA_DEPARTURE", "DFW"),
-    "target_arrival_stations": os.getenv("ALASKA_ARRIVAL_STATIONS", "SNA,ONT").split(","),
+    "departure_stations": os.getenv("ALASKA_DEPARTURE_STATIONS", "DFW").split(","),
+    "arrival_stations": os.getenv("ALASKA_ARRIVAL_STATIONS", "SNA,ONT").split(","),
+    "adults": int(os.getenv("ALASKA_ADULTS", "3")),
+    "children": int(os.getenv("ALASKA_CHILDREN", "2")),
     "target_points": int(os.getenv("ALASKA_TARGET_POINTS", "7500")),
     "search_date": os.getenv("ALASKA_SEARCH_DATE", "2025-11-14"),
-    "base_search_url": os.getenv("ALASKA_BASE_SEARCH_URL", "https://www.alaskaair.com/search/results?A=3&C=2&L=0&O={departure}&D={arrival}&OD={date}&RT=false&ShoppingMethod=onlineaward")
+    "base_search_url": os.getenv("ALASKA_BASE_SEARCH_URL", "https://www.alaskaair.com/search/results?A={adults}&C={children}&L=0&O={departure}&D={arrival}&OD={date}&RT=false&ShoppingMethod=onlineaward")
 }
 
 # Web Scraping Configuration
@@ -65,41 +67,56 @@ def get_config(scraper_name: str) -> Dict[str, Any]:
         
     Returns:
         Dictionary containing the scraper's configuration
+        
+    Raises:
+        ValueError: If scraper_name is not recognized
     """
-    configs = {
-        "power_to_choose": POWER_TO_CHOOSE_CONFIG,
-        "villa_del_arco": VILLA_DEL_ARCO_CONFIG,
-        "alaska_award_ticket": ALASKA_AWARD_TICKET_CONFIG
+    # Configuration mapping for each scraper
+    config_mappings = {
+        "power_to_choose": {
+            "config": POWER_TO_CHOOSE_CONFIG,
+            "field_mapping": {
+                "zip_code": "zip_code",
+                "contract_min": "contract_min_months", 
+                "contract_max": "contract_max_months",
+                "base_url": "base_url"
+            }
+        },
+        "villa_del_arco": {
+            "config": VILLA_DEL_ARCO_CONFIG,
+            "field_mapping": {
+                "check_in_date": "check_in_date",
+                "check_out_date": "check_out_date", 
+                "adults": "adults",
+                "children": "children",
+                "base_url": "base_url"
+            }
+        },
+        "alaska_award_ticket": {
+            "config": ALASKA_AWARD_TICKET_CONFIG,
+            "field_mapping": {
+                "departure_stations": "departure_stations",
+                "arrival_stations": "arrival_stations",
+                "adults": "adults", 
+                "children": "children",
+                "target_points": "target_points",
+                "search_date": "search_date",
+                "base_search_url": "base_search_url"
+            }
+        }
     }
     
-    config = configs.get(scraper_name, {})
+    if scraper_name not in config_mappings:
+        available_scrapers = list(config_mappings.keys())
+        raise ValueError(f"Unknown scraper: {scraper_name}. Available scrapers: {available_scrapers}")
     
-    # Map config keys to match scraper constructor parameters
-    if scraper_name == "power_to_choose":
-        return {
-            "zip_code": config["zip_code"],
-            "contract_min": config["contract_min_months"],
-            "contract_max": config["contract_max_months"],
-            "base_url": config["base_url"]
-        }
-    elif scraper_name == "villa_del_arco":
-        return {
-            "check_in_date": config["check_in_date"],
-            "check_out_date": config["check_out_date"],
-            "adults": config["adults"],
-            "children": config["children"],
-            "base_url": config["base_url"]
-        }
-    elif scraper_name == "alaska_award_ticket":
-        return {
-            "departure_station": config["departure_station"],
-            "target_arrival_stations": config["target_arrival_stations"],
-            "target_points": config["target_points"],
-            "search_date": config["search_date"],
-            "base_search_url": config["base_search_url"]
-        }
+    # Get the configuration and field mapping
+    scraper_config = config_mappings[scraper_name]
+    base_config = scraper_config["config"]
+    field_mapping = scraper_config["field_mapping"]
     
-    return config
+    # Map fields according to the mapping
+    return {output_key: base_config[input_key] for output_key, input_key in field_mapping.items()}
 
 def get_email_config() -> Dict[str, Any]:
     """Get email configuration"""

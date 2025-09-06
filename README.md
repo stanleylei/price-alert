@@ -58,8 +58,10 @@ python run_scraper.py all
 - `SCRAPER_NAME` - Which scraper to run (default: all)
 - `PTC_ZIP_CODE` - ZIP code for electricity plans
 - `VDA_CHECK_IN/OUT` - Hotel check-in/out dates
-- `ALASKA_DEPARTURE` - Departure airport (default: DFW)
-- `ALASKA_ARRIVAL_STATIONS` - Target arrival airports (default: SNA,ONT)
+- `ALASKA_DEPARTURE_STATIONS` - Departure airports, comma-separated (default: DFW)
+- `ALASKA_ARRIVAL_STATIONS` - Arrival airports, comma-separated (default: SNA,ONT)
+- `ALASKA_ADULTS` - Number of adults (default: 3)
+- `ALASKA_CHILDREN` - Number of children (default: 2)
 - `ALASKA_TARGET_POINTS` - Target points threshold (default: 7500)
 
 ## 🐳 Docker Support
