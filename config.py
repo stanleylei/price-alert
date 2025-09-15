@@ -152,6 +152,51 @@ def validate_email_config() -> bool:
     
     return True
 
+# Scheduler Configuration
+SCHEDULER_CONFIG = {
+    "power_to_choose": {
+        "enabled": os.getenv("SCHEDULER_PTC_ENABLED", "true").lower() == "true",
+        "interval_minutes": int(os.getenv("SCHEDULER_PTC_INTERVAL", "180")),  # Default: 3 hours
+        "run_immediately": os.getenv("SCHEDULER_PTC_RUN_IMMEDIATELY", "true").lower() == "true"
+    },
+    "villa_del_arco": {
+        "enabled": os.getenv("SCHEDULER_VDA_ENABLED", "true").lower() == "true",
+        "interval_minutes": int(os.getenv("SCHEDULER_VDA_INTERVAL", "360")),  # Default: 6 hours
+        "run_immediately": os.getenv("SCHEDULER_VDA_RUN_IMMEDIATELY", "true").lower() == "true"
+    },
+    "alaska_award_ticket": {
+        "enabled": os.getenv("SCHEDULER_ALASKA_ENABLED", "true").lower() == "true",
+        "interval_minutes": int(os.getenv("SCHEDULER_ALASKA_INTERVAL", "120")),  # Default: 2 hours
+        "run_immediately": os.getenv("SCHEDULER_ALASKA_RUN_IMMEDIATELY", "true").lower() == "true"
+    }
+}
+
+# Service Mode Configuration
+SERVICE_CONFIG = {
+    "mode": os.getenv("SERVICE_MODE", "scheduler"),  # Options: "scheduler", "single", "oneshot"
+    "health_check_enabled": os.getenv("HEALTH_CHECK_ENABLED", "true").lower() == "true",
+    "health_check_port": int(os.getenv("HEALTH_CHECK_PORT", "8080")),
+    "log_level": os.getenv("LOG_LEVEL", "INFO")
+}
+
+def get_scheduler_config() -> Dict[str, Any]:
+    """
+    Get scheduler configuration for all scrapers.
+    
+    Returns:
+        Dictionary containing scheduler configuration for each scraper
+    """
+    return SCHEDULER_CONFIG.copy()
+
+def get_service_config() -> Dict[str, Any]:
+    """
+    Get service mode configuration.
+    
+    Returns:
+        Dictionary containing service mode settings
+    """
+    return SERVICE_CONFIG.copy()
+
 def print_setup_instructions():
     """Print setup instructions for users"""
     print("=" * 60)
@@ -173,6 +218,11 @@ def print_setup_instructions():
     print("   - Generate an App Password (not your regular password)")
     print("   - Use the App Password in SENDER_PASSWORD")
     print()
-    print("4. Test the setup:")
+    print("4. Configure scheduler intervals (optional):")
+    print("   SCHEDULER_PTC_INTERVAL=180      # Power to Choose interval in minutes")
+    print("   SCHEDULER_VDA_INTERVAL=360      # Villa del Arco interval in minutes")
+    print("   SCHEDULER_ALASKA_INTERVAL=120   # Alaska Airlines interval in minutes")
+    print()
+    print("5. Test the setup:")
     print("   python run_scraper.py --config")
     print("=" * 60)

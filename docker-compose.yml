@@ -1,46 +1,118 @@
 version: '3.8'
 
 services:
-  # Power to Choose scraper service
+  # Long-running scheduler service (default - runs all scrapers at intervals)
+  scheduler:
+    build: .
+    container_name: price-alert-scheduler
+    restart: unless-stopped
+    environment:
+      - SERVICE_MODE=scheduler
+      # Scheduler intervals in minutes
+      - SCHEDULER_PTC_INTERVAL=${SCHEDULER_PTC_INTERVAL:-180}      # Power to Choose every 3 hours
+      - SCHEDULER_VDA_INTERVAL=${SCHEDULER_VDA_INTERVAL:-360}      # Villa del Arco every 6 hours
+      - SCHEDULER_ALASKA_INTERVAL=${SCHEDULER_ALASKA_INTERVAL:-120} # Alaska Airlines every 2 hours
+      # Enable/disable specific scrapers
+      - SCHEDULER_PTC_ENABLED=${SCHEDULER_PTC_ENABLED:-true}
+      - SCHEDULER_VDA_ENABLED=${SCHEDULER_VDA_ENABLED:-true}
+      - SCHEDULER_ALASKA_ENABLED=${SCHEDULER_ALASKA_ENABLED:-true}
+      # Health check configuration
+      - HEALTH_CHECK_ENABLED=true
+      - HEALTH_CHECK_PORT=8080
+    ports:
+      - "8080:8080"  # Health check endpoint
+    volumes:
+      - ./logs:/app/logs
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # One-time run service (runs all scrapers once)
+  single-run:
+    build: .
+    container_name: price-alert-single
+    environment:
+      - SERVICE_MODE=single
+    volumes:
+      - ./logs:/app/logs
+    env_file:
+      - .env
+    profiles:
+      - single
+
+  # Individual scraper services (for running specific scrapers once)
   power-to-choose:
     build: .
     container_name: price-alert-ptc
     environment:
+      - SERVICE_MODE=oneshot
       - SCRAPER_NAME=power_to_choose
     volumes:
       - ./logs:/app/logs
     env_file:
       - .env
+    profiles:
+      - scrapers
 
-  # Villa del Arco scraper service
   villa-del-arco:
     build: .
     container_name: price-alert-vda
     environment:
+      - SERVICE_MODE=oneshot
       - SCRAPER_NAME=villa_del_arco
     volumes:
       - ./logs:/app/logs
     env_file:
       - .env
+    profiles:
+      - scrapers
 
-  # Alaska Airlines Award Ticket scraper service
   alaska-award-ticket:
     build: .
     container_name: price-alert-alaska
     environment:
+      - SERVICE_MODE=oneshot
       - SCRAPER_NAME=alaska_award_ticket
     volumes:
       - ./logs:/app/logs
     env_file:
       - .env
+    profiles:
+      - scrapers
 
-  # Run all scrapers (default)
-  all:
+  # Development/test service with custom intervals
+  scheduler-dev:
     build: .
-    container_name: price-alert-all
+    container_name: price-alert-scheduler-dev
+    restart: unless-stopped
     environment:
-      - SCRAPER_NAME=all
+      - SERVICE_MODE=scheduler
+      # Shorter intervals for testing (in minutes)
+      - SCHEDULER_PTC_INTERVAL=5        # Every 5 minutes
+      - SCHEDULER_VDA_INTERVAL=10       # Every 10 minutes
+      - SCHEDULER_ALASKA_INTERVAL=15    # Every 15 minutes
+      - SCHEDULER_PTC_ENABLED=true
+      - SCHEDULER_VDA_ENABLED=true
+      - SCHEDULER_ALASKA_ENABLED=true
+      - HEALTH_CHECK_ENABLED=true
+      - HEALTH_CHECK_PORT=8080
+      - LOG_LEVEL=DEBUG
+    ports:
+      - "8081:8080"  # Health check endpoint (different port for dev)
     volumes:
       - ./logs:/app/logs
     env_file:
       - .env
+    profiles:
+      - dev
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
