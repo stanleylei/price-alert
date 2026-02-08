@@ -27,8 +27,5 @@ RUN playwright install --with-deps chromium
 COPY . .
 
 # Make the start script executable
-RUN chmod +x start.sh
-
-
 # Set the command to run when the container starts
-CMD ["./start.sh"]
+CMD ["python", "run_scraper.py", "all"]

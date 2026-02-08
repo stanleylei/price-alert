@@ -4,7 +4,7 @@ Refactored to use the modular price alert core.
 """
 
 import re
-from price_alert_core import PriceAlertScraper, run_async_scraper, EmailTemplate
+from price_alert_core import PriceAlertScraper, run_async_scraper, EmailTemplate, logger
 
 class VillaDelArcoScraper(PriceAlertScraper):
     """
@@ -85,9 +85,9 @@ class VillaDelArcoScraper(PriceAlertScraper):
         results_data = []
         
         try:
-            print("Waiting for dynamic content to load...")
+            logger.info("Waiting for dynamic content to load...")
             await page.locator('div[data-testid="fn-room-item-container"]').first.wait_for(timeout=30000)
-            print("Page loaded. Scraping room data...")
+            logger.info("Page loaded. Scraping room data...")
 
             room_items = page.locator('div[data-testid="fn-room-item-container"]')
             
@@ -119,7 +119,7 @@ class VillaDelArcoScraper(PriceAlertScraper):
                             })
                             
         except Exception as e:
-            print(f"Error during data scraping: {e}")
+            logger.error(f"Error during data scraping: {e}")
             
         return results_data
 

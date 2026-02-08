@@ -15,6 +15,22 @@ import os
 
 # Import configuration functions
 from config import get_email_config, validate_email_config, print_setup_instructions
+import logging
+
+def setup_logging():
+    """Configure logging with timestamp and level"""
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    # Set third-party loggers to WARNING to reduce noise
+    logging.getLogger('playwright').setLevel(logging.WARNING)
+    logging.getLogger('urllib3').setLevel(logging.WARNING)
+
+# Initialize logging
+setup_logging()
+logger = logging.getLogger(__name__)
 
 class PriceAlertScraper(ABC):
     """
@@ -135,8 +151,8 @@ class EmailSender:
         # Validate email configuration first
         if not validate_email_config():
             print("\n" + "="*60)
-            print("EMAIL CONFIGURATION ERROR")
-            print("="*60)
+            logger.error("EMAIL CONFIGURATION ERROR")
+            logger.info("="*60)
             print_setup_instructions()
             raise RuntimeError("Email configuration is incomplete. Please set your credentials.")
         
@@ -145,7 +161,8 @@ class EmailSender:
         sender_password = email_config["sender_password"]
         recipient_email = recipient or email_config["recipient_email"]
         
-        print(f"\nCondition met! Preparing to send email to {recipient_email}...")
+        
+        logger.info(f"Condition met! Preparing to send email to {recipient_email}...")
         
         message = MIMEMultipart("alternative")
         message["Subject"] = subject
@@ -157,14 +174,14 @@ class EmailSender:
             with smtplib.SMTP_SSL(email_config["smtp_server"], email_config["smtp_port"]) as server:
                 server.login(sender_email, sender_password)
                 server.sendmail(sender_email, recipient_email, message.as_string())
-            print("✓ Email sent successfully!")
+            logger.info("✓ Email sent successfully!")
         except Exception as e:
-            print(f"✗ Failed to send email. Error: {e}")
-            print("\nTroubleshooting tips:")
-            print("- Check that your Gmail credentials are correct")
-            print("- Ensure 2-Factor Authentication is enabled")
-            print("- Use an App Password, not your regular password")
-            print("- Check that 'Less secure app access' is disabled")
+            logger.error(f"✗ Failed to send email. Error: {e}")
+            logger.info("Troubleshooting tips:")
+            logger.info("- Check that your Gmail credentials are correct")
+            logger.info("- Ensure 2-Factor Authentication is enabled")
+            logger.info("- Use an App Password, not your regular password")
+            logger.info("- Check that 'Less secure app access' is disabled")
             raise
 
 class WebScraper:
@@ -187,7 +204,7 @@ class WebScraper:
             browser = await p.chromium.launch(headless=True, args=["--no-sandbox"])
             page = await browser.new_page()
             try:
-                print("--- Starting Automation ---")
+                logger.info("--- Starting Automation ---")
                 url = scraper.get_scraping_url()
                 await page.goto(url, timeout=60000)
                 
@@ -195,7 +212,7 @@ class WebScraper:
                 results_data = await scraper.scrape_data(page)
                 
             except Exception as e:
-                print(f"An error occurred during scraping: {e}")
+                logger.error(f"An error occurred during scraping: {e}")
             finally:
                 await browser.close()
                 
@@ -213,9 +230,12 @@ async def run_price_alert(scraper: PriceAlertScraper):
     """
     df = await WebScraper.scrape_with_playwright(scraper)
     
+    df = await WebScraper.scrape_with_playwright(scraper)
+    
     if df is not None and not df.empty:
-        print(f"\n--- Scraped Data ---")
-        print(df)
+        logger.info(f"--- Scraped Data ---")
+        # Log basic stats instead of full dataframe to keep logs clean
+        logger.info(f"Retrieved {len(df)} records")
         
         # Check if alert condition is met
         if scraper.check_alert_condition(df):
@@ -225,9 +245,9 @@ async def run_price_alert(scraper: PriceAlertScraper):
                 html_body=email_body
             )
         else:
-            print("\nNo alert condition met. No email sent.")
+            logger.info("No alert condition met. No email sent.")
     else:
-        print("\nNo data was scraped.")
+        logger.info("No data was scraped.")
 
 def run_async_scraper(scraper: PriceAlertScraper):
     """

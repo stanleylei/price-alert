@@ -4,7 +4,7 @@ Refactored to use the modular price alert core.
 """
 
 import re
-from price_alert_core import PriceAlertScraper, run_async_scraper, EmailTemplate
+from price_alert_core import PriceAlertScraper, run_async_scraper, EmailTemplate, logger
 
 class PowerToChooseScraper(PriceAlertScraper):
     """
@@ -80,9 +80,9 @@ class PowerToChooseScraper(PriceAlertScraper):
             await page.locator("#plan_mo_to").fill(self.contract_max)
             await page.get_by_role("link", name="Refresh Results").first.click()
             await page.locator("#loading-image-grid").wait_for(state="hidden", timeout=15000)
-            print("Filtered results are now displayed.")
+            logger.info("Filtered results are now displayed.")
             
-            print("\nScraping and cleaning the top 5 results...")
+            logger.info("\nScraping and cleaning the top 5 results...")
             rows = page.locator("#dataTable tr.row.active")
             
             for i in range(min(5, await rows.count())):
@@ -113,7 +113,7 @@ class PowerToChooseScraper(PriceAlertScraper):
                 })
                 
         except Exception as e:
-            print(f"Error during data scraping: {e}")
+            logger.error(f"Error during data scraping: {e}")
             
         return results_data
 

@@ -3,8 +3,7 @@ services:
   power-to-choose:
     build: .
     container_name: price-alert-ptc
-    environment:
-      - SCRAPER_NAME=power_to_choose
+    command: ["python", "run_scraper.py", "power_to_choose"]
     volumes:
       - ./logs:/app/logs
     env_file:
@@ -14,8 +13,7 @@ services:
   villa-del-arco:
     build: .
     container_name: price-alert-vda
-    environment:
-      - SCRAPER_NAME=villa_del_arco
+    command: ["python", "run_scraper.py", "villa_del_arco"]
     volumes:
       - ./logs:/app/logs
     env_file:
@@ -25,8 +23,7 @@ services:
   alaska-award-ticket:
     build: .
     container_name: price-alert-alaska
-    environment:
-      - SCRAPER_NAME=alaska_award_ticket
+    command: ["python", "run_scraper.py", "alaska_award_ticket"]
     volumes:
       - ./logs:/app/logs
     env_file:
@@ -36,8 +33,7 @@ services:
   all:
     build: .
     container_name: price-alert-all
-    environment:
-      - SCRAPER_NAME=all
+    command: ["python", "run_scraper.py", "all"]
     volumes:
       - ./logs:/app/logs
     env_file:

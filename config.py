@@ -8,6 +8,10 @@ Instead, set them as environment variables or create a local .env file.
 
 import os
 from typing import Dict, Any
+from dotenv import load_dotenv
+
+# Load environment variables from .env file if present
+load_dotenv()
 
 # Email Configuration
 # WARNING: These are placeholder values. Set your actual credentials via environment variables.

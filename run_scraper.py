@@ -8,7 +8,7 @@ import argparse
 import sys
 from typing import Optional
 
-from price_alert_core import PriceAlertScraper, run_async_scraper
+from price_alert_core import PriceAlertScraper, run_async_scraper, logger
 from power_to_choose_scraper import PowerToChooseScraper
 from villa_del_arco_scraper import VillaDelArcoScraper
 from alaska_award_ticket_scraper import AlaskaAwardTicketScraper
@@ -100,21 +100,99 @@ Examples:
         print(f"Alaska Award Ticket: {get_config('alaska_award_ticket')}")
         return
     
-    if not args.scraper_name:
-        print("Error: No scraper name specified.")
-        print("Use --list to see available scrapers.")
-        sys.exit(1)
+from price_alert_core import PriceAlertScraper, run_async_scraper, logger
+
+def run_scraper_safe(name: str, scraper: PriceAlertScraper) -> bool:
+    """Run a scraper and catch any exceptions"""
+    try:
+        logger.info(f"Starting {name} scraper...")
+        run_async_scraper(scraper)
+        logger.info(f"✓ {name} scraper completed successfully")
+        return True
+    except Exception as e:
+        logger.error(f"✗ {name} scraper failed: {e}")
+        return False
+
+def main():
+    """Main entry point"""
+    parser = argparse.ArgumentParser(
+        description="Run price alert scrapers",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python run_scraper.py power_to_choose
+  python run_scraper.py villa_del_arco
+  python run_scraper.py alaska_award_ticket
+  python run_scraper.py all
+  python run_scraper.py --list
+        """
+    )
     
-    # Create and run the specified scraper
+    parser.add_argument(
+        "scraper_name",
+        nargs="?",
+        default="all",
+        help="Name of the scraper to run (default: all)"
+    )
+    
+    parser.add_argument(
+        "--list", "-l",
+        action="store_true",
+        help="List available scrapers"
+    )
+    
+    parser.add_argument(
+        "--config",
+        action="store_true",
+        help="Show current configuration"
+    )
+    
+    args = parser.parse_args()
+    
+    if args.list:
+        list_available_scrapers()
+        return
+    
+    if args.config:
+        print("Current configuration:")
+        print(f"Power to Choose: {get_config('power_to_choose')}")
+        print(f"Villa del Arco: {get_config('villa_del_arco')}")
+        print(f"Alaska Award Ticket: {get_config('alaska_award_ticket')}")
+        return
+    
+    # Handle 'all' case
+    if args.scraper_name == "all":
+        logger.info("Running all scrapers sequentially...")
+        results = {}
+        for name in SCRAPER_REGISTRY:
+            scraper = create_scraper(name)
+            if scraper:
+                results[name] = run_scraper_safe(name, scraper)
+            else:
+                logger.error(f"Failed to create scraper {name}")
+                results[name] = False
+                
+        # Summary
+        logger.info("\n=== All Scrapers Completed ===")
+        success = all(results.values())
+        for name, result in results.items():
+            status = "✓" if result else "✗"
+            logger.info(f"{status} {name}")
+            
+        sys.exit(0 if success else 1)
+        
+    # Run specific scraper
     scraper = create_scraper(args.scraper_name)
     
     if scraper is None:
-        print(f"Error: Unknown scraper '{args.scraper_name}'")
+        logger.error(f"Error: Unknown scraper '{args.scraper_name}'")
         print("Use --list to see available scrapers.")
         sys.exit(1)
     
-    print(f"Running {args.scraper_name} scraper...")
-    run_async_scraper(scraper)
+    if run_scraper_safe(args.scraper_name, scraper):
+        sys.exit(0)
+    else:
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

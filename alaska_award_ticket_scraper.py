@@ -4,7 +4,7 @@ Monitors for 7.5k points availability on DFW → SNA and DFW → ONT routes.
 """
 
 import re
-from price_alert_core import PriceAlertScraper, run_async_scraper, EmailTemplate
+from price_alert_core import PriceAlertScraper, run_async_scraper, EmailTemplate, logger
 
 class AlaskaAwardTicketScraper(PriceAlertScraper):
     """
@@ -122,20 +122,20 @@ class AlaskaAwardTicketScraper(PriceAlertScraper):
         for departure_station in self.departure_stations:
             for arrival_station in self.arrival_stations:
                 current_combination += 1
-                print(f"\n--- Searching for {departure_station} → {arrival_station} ({current_combination}/{total_combinations}) ---")
+                logger.info(f"\n--- Searching for {departure_station} → {arrival_station} ({current_combination}/{total_combinations}) ---")
                 
                 try:
                     search_url = self._build_search_url(departure_station, arrival_station)
-                    print(f"Navigating to: {search_url}")
+                    logger.info(f"Navigating to: {search_url}")
                     await page.goto(search_url, timeout=60000)
                     
                     # Wait for page to load completely
-                    print("Waiting for page to load...")
+                    logger.info("Waiting for page to load...")
                     await page.wait_for_load_state('domcontentloaded')
                     await page.wait_for_load_state('networkidle', timeout=30000)
                     await page.wait_for_timeout(3000)  # Extra wait for JS rendering
                     
-                    print("Looking for flight options...")
+                    logger.info("Looking for flight options...")
                     
                     # Try multiple selector strategies
                     matrix_rows = []
@@ -145,7 +145,7 @@ class AlaskaAwardTicketScraper(PriceAlertScraper):
                         els = await page.locator('[data-testid="matrix-row"]').all()
                         if els and len(els) > 0:
                             matrix_rows = els
-                            print(f"✓ Found {len(matrix_rows)} rows via [data-testid='matrix-row']")
+                            logger.info(f"✓ Found {len(matrix_rows)} rows via [data-testid='matrix-row']")
                     except Exception:
                         pass
                     
@@ -155,7 +155,7 @@ class AlaskaAwardTicketScraper(PriceAlertScraper):
                             els = await page.locator('auro-button[type="button"]').all()
                             if els and len(els) > 3:  # Filter out nav buttons
                                 matrix_rows = els
-                                print(f"✓ Found {len(matrix_rows)} buttons via auro-button")
+                                logger.info(f"✓ Found {len(matrix_rows)} buttons via auro-button")
                         except Exception:
                             pass
                     
@@ -165,7 +165,7 @@ class AlaskaAwardTicketScraper(PriceAlertScraper):
                             els = await page.locator('div[role="button"], button[role="option"]').all()
                             if els and len(els) > 0:
                                 matrix_rows = els
-                                print(f"✓ Found {len(matrix_rows)} interactive elements")
+                                logger.info(f"✓ Found {len(matrix_rows)} interactive elements")
                         except Exception:
                             pass
                     
@@ -173,17 +173,17 @@ class AlaskaAwardTicketScraper(PriceAlertScraper):
                     if not matrix_rows:
                         body_text = await page.locator('body').text_content()
                         if '0 results' in body_text.lower() or 'no flights' in body_text.lower():
-                            print(f"⚠ No flights available for {departure_station} → {arrival_station} (0 results page)")
+                            logger.info(f"⚠ No flights available for {departure_station} → {arrival_station} (0 results page)")
                             continue
                         else:
                             # Fallback: try common result containers
                             els = await page.locator('button, [data-testid*="result"], [class*="result"]').all()
                             if els and len(els) > 5:
                                 matrix_rows = els
-                                print(f"✓ Found {len(matrix_rows)} potential result elements (fallback)")
+                                logger.info(f"✓ Found {len(matrix_rows)} potential result elements (fallback)")
                     
                     if not matrix_rows:
-                        print(f"⚠ No flight elements found for {departure_station} → {arrival_station}")
+                        logger.warning(f"⚠ No flight elements found for {departure_station} → {arrival_station}")
                         continue
                     
                     # Extract data from all found elements
@@ -213,20 +213,20 @@ class AlaskaAwardTicketScraper(PriceAlertScraper):
                                     "Flight Number": flight_number
                                 }
                                 route_results.append(row_data)
-                                print(f"  Found flight: {flight_number} at {departure_time} → {arrival_time} ({points} pts)")
+                                logger.info(f"  Found flight: {flight_number} at {departure_time} → {arrival_time} ({points} pts)")
                         except Exception as e:
                             continue
                     
-                    print(f"✓ Found {len(route_results)} valid flights for {departure_station} → {arrival_station}")
+                    logger.info(f"✓ Found {len(route_results)} valid flights for {departure_station} → {arrival_station}")
                     all_results.extend(route_results)
                     
                 except Exception as e:
-                    print(f"✗ Error searching for {departure_station} → {arrival_station}: {str(e)[:80]}")
+                    logger.error(f"✗ Error searching for {departure_station} → {arrival_station}: {str(e)[:80]}")
                     continue
     
-        print(f"\n{'='*60}")
-        print(f"TOTAL FLIGHTS FOUND: {len(all_results)}")
-        print(f"{'='*60}")
+        logger.info(f"\n{'='*60}")
+        logger.info(f"TOTAL FLIGHTS FOUND: {len(all_results)}")
+        logger.info(f"{'='*60}")
         return all_results
     
     async def _extract_row_data(self, row) -> dict:
@@ -277,7 +277,7 @@ class AlaskaAwardTicketScraper(PriceAlertScraper):
                 }
             
         except Exception as e:
-            print(f"Error extracting row data: {e}")
+            logger.error(f"Error extracting row data: {e}")
             
         return {}
     
