@@ -113,10 +113,9 @@ class AlaskaAwardTicketScraper(PriceAlertScraper):
         )
     
     async def scrape_data(self, page) -> list:
-        """Scrape flight data from Alaska Airlines award search results for all departure/arrival combinations"""
+        """Scrape flight data from Alaska Airlines award search results"""
         all_results = []
         
-        # Generate all departure/arrival combinations
         total_combinations = len(self.departure_stations) * len(self.arrival_stations)
         current_combination = 0
         
@@ -126,49 +125,108 @@ class AlaskaAwardTicketScraper(PriceAlertScraper):
                 print(f"\n--- Searching for {departure_station} → {arrival_station} ({current_combination}/{total_combinations}) ---")
                 
                 try:
-                    # Navigate to the specific search URL
                     search_url = self._build_search_url(departure_station, arrival_station)
                     print(f"Navigating to: {search_url}")
                     await page.goto(search_url, timeout=60000)
                     
-                    # Wait for page to load
+                    # Wait for page to load completely
                     print("Waiting for page to load...")
+                    await page.wait_for_load_state('domcontentloaded')
                     await page.wait_for_load_state('networkidle', timeout=30000)
-                    print("Page loaded. Looking for flight data...")
+                    await page.wait_for_timeout(3000)  # Extra wait for JS rendering
                     
-                    # Wait for matrix rows to appear
+                    print("Looking for flight options...")
+                    
+                    # Try multiple selector strategies
+                    matrix_rows = []
+                    
+                    # Strategy 1: Original data-testid
                     try:
-                        await page.locator('[data-testid="matrix-row"]').first.wait_for(timeout=30000)
-                        print("Found matrix rows, extracting data...")
-                    except Exception as e:
-                        print(f"Matrix rows not found for {departure_station} → {arrival_station}: {e}")
+                        els = await page.locator('[data-testid="matrix-row"]').all()
+                        if els and len(els) > 0:
+                            matrix_rows = els
+                            print(f"✓ Found {len(matrix_rows)} rows via [data-testid='matrix-row']")
+                    except Exception:
+                        pass
+                    
+                    # Strategy 2: Auro buttons or generic interactive elements
+                    if not matrix_rows:
+                        try:
+                            els = await page.locator('auro-button[type="button"]').all()
+                            if els and len(els) > 3:  # Filter out nav buttons
+                                matrix_rows = els
+                                print(f"✓ Found {len(matrix_rows)} buttons via auro-button")
+                        except Exception:
+                            pass
+                    
+                    # Strategy 3: Divs with role button
+                    if not matrix_rows:
+                        try:
+                            els = await page.locator('div[role="button"], button[role="option"]').all()
+                            if els and len(els) > 0:
+                                matrix_rows = els
+                                print(f"✓ Found {len(matrix_rows)} interactive elements")
+                        except Exception:
+                            pass
+                    
+                    # Strategy 4: Search for any element with flight-related text
+                    if not matrix_rows:
+                        body_text = await page.locator('body').text_content()
+                        if '0 results' in body_text.lower() or 'no flights' in body_text.lower():
+                            print(f"⚠ No flights available for {departure_station} → {arrival_station} (0 results page)")
+                            continue
+                        else:
+                            # Fallback: try common result containers
+                            els = await page.locator('button, [data-testid*="result"], [class*="result"]').all()
+                            if els and len(els) > 5:
+                                matrix_rows = els
+                                print(f"✓ Found {len(matrix_rows)} potential result elements (fallback)")
+                    
+                    if not matrix_rows:
+                        print(f"⚠ No flight elements found for {departure_station} → {arrival_station}")
                         continue
                     
-                    # Extract data from all matrix rows
-                    matrix_rows = await page.locator('[data-testid="matrix-row"]').all()
-                    print(f"Found {len(matrix_rows)} matrix rows for {departure_station} → {arrival_station}")
-                    
+                    # Extract data from all found elements
                     route_results = []
                     for row in matrix_rows:
                         try:
-                            row_data = await self._extract_row_data(row)
-                            if row_data:
-                                # Ensure the departure and arrival stations match what we're searching for
-                                if (row_data.get("Departure Station") == departure_station and 
-                                    row_data.get("Arrival Station") == arrival_station):
-                                    route_results.append(row_data)
+                            row_text = await row.text_content()
+                            if not row_text or len(row_text.strip()) < 5:
+                                continue
+                            
+                            # Parse all data from row text
+                            points = self._parse_points(row_text)
+                            price = self._parse_price(row_text)
+                            departure_time = self._parse_departure_time(row_text)
+                            arrival_time = self._parse_arrival_time(row_text)
+                            flight_number = self._parse_flight_number(row_text)
+                            
+                            # Only include if we found meaningful points or price
+                            if points > 0 or price > 0:
+                                row_data = {
+                                    "Departure Station": departure_station,
+                                    "Arrival Station": arrival_station,
+                                    "Departure Time": departure_time,
+                                    "Arrival Time": arrival_time,
+                                    "Points": points,
+                                    "Price (USD)": price,
+                                    "Flight Number": flight_number
+                                }
+                                route_results.append(row_data)
+                                print(f"  Found flight: {flight_number} at {departure_time} → {arrival_time} ({points} pts)")
                         except Exception as e:
-                            print(f"Error extracting row data: {e}")
                             continue
                     
-                    print(f"Found {len(route_results)} flights for {departure_station} → {arrival_station}")
+                    print(f"✓ Found {len(route_results)} valid flights for {departure_station} → {arrival_station}")
                     all_results.extend(route_results)
                     
                 except Exception as e:
-                    print(f"Error searching for {departure_station} → {arrival_station}: {e}")
+                    print(f"✗ Error searching for {departure_station} → {arrival_station}: {str(e)[:80]}")
                     continue
-        
-        print(f"\nTotal flights found across all searches: {len(all_results)}")
+    
+        print(f"\n{'='*60}")
+        print(f"TOTAL FLIGHTS FOUND: {len(all_results)}")
+        print(f"{'='*60}")
         return all_results
     
     async def _extract_row_data(self, row) -> dict:
@@ -269,18 +327,55 @@ class AlaskaAwardTicketScraper(PriceAlertScraper):
         fallback_match = re.search(r'(\d+)', text)
         return int(fallback_match.group(1)) if fallback_match else 0
     
-    def _parse_flight_number(self, text: str) -> str:
-        """Parse flight number from text like 'AA 1639'"""
+    def _parse_departure_time(self, text: str) -> str:
+        """Parse departure time from text like '6:30 AM' or '6:30am'"""
         if not text:
             return "N/A"
         
-        # Look for airline code + number pattern
-        flight_match = re.search(r'([A-Z]{2})\s*(\d+)', text)
+        # Look for time pattern HH:MM (am|pm|AM|PM)
+        time_match = re.search(r'(\d{1,2}):(\d{2})\s*([AaPp][Mm])', text)
+        if time_match:
+            return f"{time_match.group(1)}:{time_match.group(2)} {time_match.group(3).upper()}"
+        
+        # Fallback: just look for first time-like pattern
+        time_match = re.search(r'(\d{1,2}):(\d{2})', text)
+        if time_match:
+            return f"{time_match.group(1)}:{time_match.group(2)}"
+        
+        return "N/A"
+    
+    def _parse_arrival_time(self, text: str) -> str:
+        """Parse arrival time - typically the second time in the text"""
+        if not text:
+            return "N/A"
+        
+        # Find all time patterns in the text
+        times = re.findall(r'(\d{1,2}):(\d{2})\s*([AaPp][Mm])?', text)
+        
+        if len(times) > 1:
+            # Return the second time found (arrival)
+            match = times[1]
+            if match[2]:  # Has AM/PM
+                return f"{match[0]}:{match[1]} {match[2].upper()}"
+            else:
+                return f"{match[0]}:{match[1]}"
+        elif len(times) == 1:
+            # If only one time, assume it's departure only
+            return "N/A"
+        
+        return "N/A"
+    
+    def _parse_flight_number(self, text: str) -> str:
+        """Parse flight number from text like 'AS 1639' or 'AS1639'"""
+        if not text:
+            return "N/A"
+        
+        # Look for airline code + number pattern (AS, AA, etc.)
+        flight_match = re.search(r'\b([A-Z]{2})\s*(\d{3,4})\b', text)
         if flight_match:
             return f"{flight_match.group(1)} {flight_match.group(2)}"
         
-        # Fallback to first part of text
-        return text.split('\n')[0].strip() or "N/A"
+        return "N/A"
 
 if __name__ == "__main__":
     scraper = AlaskaAwardTicketScraper()

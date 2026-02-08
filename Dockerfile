@@ -1,5 +1,5 @@
-# Start from the recommended Python 3.12 slim image
-FROM python:3.12-slim-bookworm
+# Start from the recommended Python 3.14 slim image
+FROM python:3.14-slim-bookworm
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1

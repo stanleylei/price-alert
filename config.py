@@ -42,11 +42,11 @@ VILLA_DEL_ARCO_CONFIG = {
 # Alaska Airlines Award Ticket Configuration
 ALASKA_AWARD_TICKET_CONFIG = {
     "departure_stations": os.getenv("ALASKA_DEPARTURE_STATIONS", "DFW").split(","),
-    "arrival_stations": os.getenv("ALASKA_ARRIVAL_STATIONS", "SNA,ONT").split(","),
+    "arrival_stations": os.getenv("ALASKA_ARRIVAL_STATIONS", "MCO").split(","),
     "adults": int(os.getenv("ALASKA_ADULTS", "3")),
     "children": int(os.getenv("ALASKA_CHILDREN", "2")),
     "target_points": int(os.getenv("ALASKA_TARGET_POINTS", "7500")),
-    "search_date": os.getenv("ALASKA_SEARCH_DATE", "2025-11-14"),
+    "search_date": os.getenv("ALASKA_SEARCH_DATE", "2026-05-19"),
     "base_search_url": os.getenv("ALASKA_BASE_SEARCH_URL", "https://www.alaskaair.com/search/results?A={adults}&C={children}&L=0&O={departure}&D={arrival}&OD={date}&RT=false&ShoppingMethod=onlineaward")
 }
 

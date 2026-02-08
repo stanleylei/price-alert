@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Power to Choose scraper service
   power-to-choose:
