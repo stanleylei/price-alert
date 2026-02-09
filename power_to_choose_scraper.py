@@ -84,8 +84,13 @@ class PowerToChooseScraper(PriceAlertScraper):
             
             logger.info("\nScraping and cleaning the top 5 results...")
             rows = page.locator("#dataTable tr.row.active")
+            row_count = await rows.count()
             
-            for i in range(min(5, await rows.count())):
+            if row_count == 0:
+                logger.error("No electricity plans found. The page structure may have changed or no plans match the criteria.")
+                return results_data
+            
+            for i in range(min(5, row_count)):
                 row = rows.nth(i)
                 plan_details_raw = await row.locator("td.td-plan").inner_text()
                 price_kwh_raw = await row.locator("td.td-price").inner_text()
@@ -114,6 +119,9 @@ class PowerToChooseScraper(PriceAlertScraper):
                 
         except Exception as e:
             logger.error(f"Error during data scraping: {e}")
+        
+        if len(results_data) == 0:
+            logger.error("Scraping completed but no plans were extracted. Check for HTML structure changes.")
             
         return results_data
 

@@ -35,11 +35,11 @@ POWER_TO_CHOOSE_CONFIG = {
 
 # Villa del Arco Configuration
 VILLA_DEL_ARCO_CONFIG = {
-    "check_in_date": os.getenv("VDA_CHECK_IN", "2025-12-16"),
-    "check_out_date": os.getenv("VDA_CHECK_OUT", "2025-12-19"),
+    "check_in_date": os.getenv("VDA_CHECK_IN", "2026-12-16"),
+    "check_out_date": os.getenv("VDA_CHECK_OUT", "2026-12-19"),
     "adults": int(os.getenv("VDA_ADULTS", "2")),
     "children": int(os.getenv("VDA_CHILDREN", "2")),
-    "price_threshold_usd": int(os.getenv("VDA_PRICE_THRESHOLD", "1100")),
+    "price_threshold_usd": int(os.getenv("VDA_PRICE_THRESHOLD", "1200")),
     "base_url": os.getenv("VDA_BASE_URL", "https://booking.villadelarco.com/bookcore/availability/villarco/{check_in}/{check_out}/{adults}/{children}/?lang=en&rrc=1&adults={adults}&ninos={children}")
 }
 

@@ -90,10 +90,17 @@ class VillaDelArcoScraper(PriceAlertScraper):
             logger.info("Page loaded. Scraping room data...")
 
             room_items = page.locator('div[data-testid="fn-room-item-container"]')
+            count = await room_items.count()
+            logger.info(f"Found {count} room items.")
             
-            for i in range(await room_items.count()):
+            if count == 0:
+                logger.error("No rooms found. The page structure may have changed or no rooms are available for these dates.")
+                return results_data
+            
+            for i in range(count):
                 room_item = room_items.nth(i)
                 room_name = await room_item.locator("h3").first.inner_text()
+                logger.info(f"Scraping room: {room_name}")
                 
                 rate_sections = room_item.locator('div[data-testid="fn-accordion"]')
                 
@@ -101,12 +108,19 @@ class VillaDelArcoScraper(PriceAlertScraper):
                     rate_section = rate_sections.nth(j)
                     rate_name = await rate_section.locator("h3").first.inner_text()
                     boards = rate_section.locator('div[data-testid="fn-board"]')
+                    board_count = await boards.count()
+                    
+                    if board_count == 0:
+                        logger.warning(f"No board options found for rate '{rate_name}' in room '{room_name}'.")
+                        continue
 
-                    for k in range(await boards.count()):
+                    for k in range(board_count):
                         board = boards.nth(k)
-                        if await board.locator('span[data-testid="fn-loyalty-locked-price"]').count() > 0:
+                        # Use fn-board-total-price selector (the website structure changed from fn-loyalty-locked-price)
+                        price_elem = board.locator('span[data-testid="fn-board-total-price"]')
+                        if await price_elem.count() > 0:
                             board_type = await board.locator('span[class*="TooltipNameStyles"]').first.inner_text()
-                            price_raw = await board.locator('span[data-testid="fn-loyalty-locked-price"]').first.inner_text()
+                            price_raw = await price_elem.first.inner_text()
                             
                             price_match = re.search(r'[\d,]+', price_raw)
                             price = int(price_match.group(0).replace(',', '')) if price_match else 0
@@ -117,9 +131,16 @@ class VillaDelArcoScraper(PriceAlertScraper):
                                 "Board Type": board_type,
                                 "Price (USD)": price
                             })
+                            logger.info(f"  Found rate: {rate_name} - {board_type} - ${price}")
+                        else:
+                            # Log when we skip a board because it doesn't match criteria or selector
+                            logger.debug(f"Skipping board option in {rate_name} (no total price found)")
                             
         except Exception as e:
             logger.error(f"Error during data scraping: {e}")
+        
+        if len(results_data) == 0:
+            logger.error("Scraping completed but no rates were extracted. Check for HTML structure changes.")
             
         return results_data
 

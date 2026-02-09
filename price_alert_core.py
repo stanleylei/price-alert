@@ -206,6 +206,7 @@ class WebScraper:
             try:
                 logger.info("--- Starting Automation ---")
                 url = scraper.get_scraping_url()
+                logger.info(f"Scraping URL: {url}")
                 await page.goto(url, timeout=60000)
                 
                 # Call the specific scraper's data extraction method

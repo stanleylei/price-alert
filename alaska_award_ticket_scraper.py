@@ -227,6 +227,10 @@ class AlaskaAwardTicketScraper(PriceAlertScraper):
         logger.info(f"\n{'='*60}")
         logger.info(f"TOTAL FLIGHTS FOUND: {len(all_results)}")
         logger.info(f"{'='*60}")
+        
+        if len(all_results) == 0:
+            logger.error("No flights found across all routes. Check for HTML structure changes or availability issues.")
+        
         return all_results
     
     async def _extract_row_data(self, row) -> dict:
